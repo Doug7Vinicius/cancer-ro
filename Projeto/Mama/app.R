@@ -91,6 +91,7 @@ df <- df %>%
 #
 ui <- dashboardPage(
   dashboardHeader(
+    #
     title = tagList(
       # Adiciona a logo
       tags$img(src = 'mama.png', height = '50px', style = 'float: left; margin-right: 10px;'),
@@ -113,7 +114,7 @@ ui <- dashboardPage(
                menuSubItem("Kaplan-Meier", tabName = "km"),
                menuSubItem("Teste de Log-Rank", tabName = "log-rank")),
       menuItem("Modelos Paramétricos", tabName = "parametric", icon = icon("bar-chart"),
-               menuSubItem("Modelo Exponencial", tabName = "demograficas"),
+               menuSubItem("Modelo Exponencial", tabName = "exponencial"),
                menuSubItem("Modelo Weibull", tabName = "demograficas"),
                menuSubItem("Modelo Log-normal", tabName = "demograficas"))
     )
@@ -149,19 +150,28 @@ ui <- dashboardPage(
       # Modelo Kaplan-Meier
       tabItem(tabName = "km",
               fluidRow(
-                box(title = "Curva Kaplan-Meier", status = "primary", solidHeader = TRUE,
-                    plotOutput("km_plot"))
+                box(title = "Curva Kaplan-Meier", 
+                    status = "warning", 
+                    solidHeader = TRUE,
+                    collapsible = TRUE,
+                    plotOutput("km_plot")
+                    )
               )
       ),
       # Modelos Paramétricos
-      tabItem(tabName = "parametric",
+      tabItem(tabName = "exponencial",
               fluidRow(
-                box(title = "Modelos Paramétricos", status = "primary", solidHeader = TRUE,
-                    plotOutput("parametric_plot"))
-              )
+                tabBox(
+                  title = "Modelos Paramétricos",
+                  # The id lets us use input$tabset1 on the server to find the current tab
+                  id = "tabset1", height = "250px",
+                  tabPanel("Sobrevida", "First tab content"),
+                  tabPanel("Tab2", "Tab content 2")
+                )
       )
     )
   )
+)
 )
 
 #-------------------------------------------------------------------------------
@@ -223,7 +233,6 @@ server <- function(input, output) {
     
     # Modelo Log-logístico
     
-    # Modelo Gompertz
     
   })
 }

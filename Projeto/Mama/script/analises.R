@@ -2,6 +2,14 @@
 
 
 
+
+
+
+
+
+
+
+
 mama <- df
 
 mama <- mama %>% 
