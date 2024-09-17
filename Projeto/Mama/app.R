@@ -22,13 +22,14 @@ library(eha)
 library(shiny)
 library(shinydashboard)
 library(readr)
+library(DT)
+library(plotly)
 
 # Importar os dados.
 #-------------------------------------------------------------------------------
 base <- read_delim("~/PROJETOS/CANCER/Projeto/Mama/dataset/base_nao_identificada_2864.csv", 
                    delim = ";", escape_double = FALSE, locale = locale(encoding = "Latin1"), 
                    trim_ws = TRUE)
-
 
 # Resumo mais detalhado da estrutura dos dados.
 glimpse(base)
@@ -93,26 +94,28 @@ ui <- dashboardPage(
     title = tagList(
       # Adiciona a logo
       tags$img(src = 'mama.png', height = '50px', style = 'float: left; margin-right: 10px;'),
-      "Meu Dashboard"
+      "Câncer de Mama"
     ),
     # Outras opções do cabeçalho, se necessário
     titleWidth = 250
   ),
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Geral", tabName = "geral", icon = icon("dashboard"),
+      menuItem("Geral", tabName = 'geral', icon = icon("dashboard")),
+      menuItem("Análise Exploratória", tabName = "AED", icon = icon("dashboard"),
                menuSubItem("Demográficas", tabName = "demograficas"),
                menuSubItem("Morfológicas", tabName = "morfologicas"),
-               menuSubItem("Patológicas", tabName = "patologicas"),
-               menuSubItem("Tabela", tabName = "clinicas")
+               menuSubItem("Tempo", tabName = "tempo"),
+               menuSubItem("Janela de Observação", tabName = "janela"),
+               menuSubItem("Tabela", tabName = "tabela")
       ),
       menuItem("Modelo Kaplan-Meier", tabName = "km", icon = icon("line-chart"),
                menuSubItem("Kaplan-Meier", tabName = "km"),
                menuSubItem("Teste de Log-Rank", tabName = "log-rank")),
       menuItem("Modelos Paramétricos", tabName = "parametric", icon = icon("bar-chart"),
-               menuSubItem("Demográficas", tabName = "demograficas"),
-               menuSubItem("Demográficas", tabName = "demograficas"),
-               menuSubItem("Demográficas", tabName = "demograficas"))
+               menuSubItem("Modelo Exponencial", tabName = "demograficas"),
+               menuSubItem("Modelo Weibull", tabName = "demograficas"),
+               menuSubItem("Modelo Log-normal", tabName = "demograficas"))
     )
   ),
   dashboardBody(
@@ -129,12 +132,20 @@ ui <- dashboardPage(
                     dataTableOutput("demograficas")),
                 box(title = "Morfológicas", status = "primary", solidHeader = TRUE, 
                     dataTableOutput("morfologicas")),
-                box(title = "Patológicas", status = "primary", solidHeader = TRUE, 
-                    dataTableOutput("patologicas")),
-                box(title = "Clínicas", status = "primary", solidHeader = TRUE, 
-                    dataTableOutput("clinicas"))
+                box(title = "Tempo", status = "primary", solidHeader = TRUE, 
+                    dataTableOutput("tempo")),
+                box(title = "Tabela", status = "primary", solidHeader = TRUE, 
+                    dataTableOutput("tabela"))
               )
       ),
+      
+      # 
+      tabItem(tabName = "tabela",
+              h2("Conjunto de Dados"),
+              dataTableOutput("tabela")
+        
+      ),
+      
       # Modelo Kaplan-Meier
       tabItem(tabName = "km",
               fluidRow(
@@ -159,22 +170,28 @@ server <- function(input, output) {
   
   output$demograficas <- renderDataTable({
     # Substitua pelo seu dataset demográfico
-    head(lung)
+  
   })
   
   output$morfologicas <- renderDataTable({
     # Substitua pelo seu dataset morfológico
-    head(lung)
+    
   })
   
-  output$patologicas <- renderDataTable({
+  output$clin<- renderDataTable({
     # Substitua pelo seu dataset patológico
-    head(lung)
+    
   })
-  
-  output$clinicas <- renderDataTable({
-    # Substitua pelo seu dataset clínico
-    head(lung)
+    #
+  output$tabela <- renderDT({
+    datatable(df, options = list(
+      scrollX = TRUE, # rolagem horizontal
+      scrollY = "400px", # Define altura fixa para rolagem vertical
+      pageLength = 5, 
+      autoWidth = TRUE,
+      language = list(
+        search = "Pesquisar"
+      )))
   })
   
   output$km_plot <- renderPlot({
@@ -193,17 +210,21 @@ server <- function(input, output) {
       # risk.table.y.text = TRUE,
       # ncensor.plot = TRUE,
     )
+    g$plot <- g$plot + theme(legend.title = element_blank())
     print(g)
   })
   
   output$parametric_plot <- renderPlot({
-    # Exemplo com modelo Weibull
-    fit2 <- survreg(Surv(Tempo, Status) ~ 1, data = df, dist = "weibull")
-    pred <- predict(fit2, newdata = df, type = "quantile", p = 0.5)
-    g <- ggplot(df, aes(x = time, y = pred)) +
-      geom_point() +
-      labs(title = "Modelo Paramétrico (Weibull)", x = "Tempo", y = "Predição")
-    print(g)
+    # Modelo Exponencial
+    
+    # Modelo Weibull
+    
+    # Modelo Log-normal
+    
+    # Modelo Log-logístico
+    
+    # Modelo Gompertz
+    
   })
 }
 

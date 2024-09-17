@@ -2,28 +2,29 @@
 
 
 
+mama <- df
 
-can_mama <- can_mama %>% 
+mama <- mama %>% 
   mutate(Faixa_etária = cut(Idade,
-                            breaks = c(-Inf, 39,50,60,Inf),
-                            labels = c("Menos de 40 anos","Entre 40 a 50","Entre 51 a 60","Acima de 60 anos")))
+                            breaks = c(-Inf, 40,50,Inf),
+                            labels = c("Menos de 40 anos","Entre 40 a 50","Acima de 50 anos")))
 
 
 
 
 
 
-km_sex = survfit(Surv(Tempo, Status) ~ Faixa_etária, data = can_mama)
+km_sex = survfit(Surv(Tempo, Status) ~ Faixa_etária, data = mama)
 print(km_sex)
 
 mama2 <- mama %>% 
   filter(Cidade %in% c("PORTO VELHO","CACOAL"))
   
-ggsurvplot(survfit(Surv(Tempo, Status) ~ Faixa_etária, data = can_mama), # modelo de sobrevivencia.
+ggsurvplot(survfit(Surv(Tempo, Status) ~ Faixa_etária, data = mama), # modelo de sobrevivencia.
              xlab = "Dias", 
              ylab = "Probabilidade de Sobrevida",
              pval = TRUE, 
-             risk.table = TRUE,
+             risk.table = FALSE,
              conf.int = FALSE,
              ylim = c(0.85,1),
              surv.median.line = "hv")
@@ -107,7 +108,7 @@ fit <- survfit(Surv(Tempo, Status) ~ as.factor(Extensão), data = df)
 
 ggsurvplot(fit,
            conf.int = FALSE,
-           ylim = c(0.85,1))
+           )
 
 
 
@@ -126,16 +127,16 @@ can_fm$`Código da Topografia` <- ifelse(can_fm$`Código da Topografia` %in% c("
 
 
 #-------------------------------------------------------------------------------------------------------------------------
-fit_overall = survfit(Surv(Tempo, Status) ~ 1, data = mama)
+fit_overall = survfit(Surv(Tempo, Status) ~ 1, data = df)
 
 # Distribuição Exponencial
-ajust1 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'exponential', data = mama)
+ajust1 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'exponential', data = df)
 ajust1
 
 alpha <- exp(ajust1$coefficients[1])
 alpha
 
-ajust2 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'weibull', data = mama)
+ajust2 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'weibull', data = df)
 ajust2
 
 alpha <- exp(ajust2$coefficients[1])
@@ -145,15 +146,15 @@ gama
 cbind(gama, alpha)
 
 # Distribuição Log-normal
-ajust3 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'lognorm', data = mama)
+ajust3 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'lognorm', data = df)
 ajust3
 
 # Distribuição Log-logístico
-ajust4 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'loglogistic', data = mama)
+ajust4 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'loglogistic', data = df)
 ajust4
 
 #
-ajust5 <- flexsurvreg(Surv(Tempo, Status) ~ 1, dist = 'gompertz', data = mama)
+ajust5 <- flexsurvreg(Surv(Tempo, Status) ~ 1, dist = 'gompertz', data = df)
 ajust5
 
 stgom <- exp((-1/-0.001091)*0.000173*(exp(-0.001091*time) - 1))
@@ -161,14 +162,14 @@ stgom <- exp((-1/-0.001091)*0.000173*(exp(-0.001091*time) - 1))
 #
 time <- fit_overall$time
 st <- fit_overall$surv
-ste <- exp(-time/9073.726)
-stw <- exp(-(time/19940.62)^0.7498342)
-stln <- pnorm((-log(time) + 10.7142)/2.957784)
-stlog <- 1/(1 + (-0.2609508*time)^(9.7509464))
-cbind(time, st, ste, stw, stln, stlog, stgom) %>% head()
+ste <- exp(-time/9051.529)
+stw <- exp(-(time/19118.27)^0.7583723)
+stln <- pnorm((-log(time) + 10.61644)/2.893923)
+stlog <- 1/(1 + (0.2483866*time)^(9.7051755))
+cbind(time, st, ste, stw, stln, stlog) %>% head()
 
 #
-par(mfrow = c(1,5))
+par(mfrow = c(1,3))
 plot(ste,st, pch = 16, ylim = range(c(0.7,1)), xlim = range(c(0.6,1)), ylab = 'S(t): Kaplan-Meier',
      xlab = 'S(t): Exponencial')
 lines(c(0,1), c(0,1), type = 'l', lty = 1)
@@ -190,7 +191,7 @@ plot(stgom,st, pch = 16, ylim = range(c(0.7,1)), xlim = range(c(0.6,1)), ylab = 
 lines(c(0,1), c(0,1), type = 'l', lty = 1)
 
 #
-par(mfrow = c(1,5))
+par(mfrow = c(1,4))
 plot(fit_overall, conf.int = F, xlab = 'Tempo', ylab = 'S(t)', main = 'Exponencial', ylim = c(0.85,1))
 lines(c(0,time), c(1,ste), lty = 2)
 
@@ -288,7 +289,7 @@ bic_values <- c(
 bic_values
 
 # Gráfico de comparação entre os modelos ajustados e Kaplan-Meier
-plot(fit_exp, ci = TRUE, col = "red", main = "Comparação dos Modelos de Sobrevivência")
+plot(fit_exp, ci = TRUE, col = "red", main = "Comparação dos Modelos de Sobrevivência", ylim = c(0.8,1))
 lines(fit_weibull, col = "blue")
 lines(fit_lognormal, col = "green")
 lines(fit_loglogistic, col = "purple")
