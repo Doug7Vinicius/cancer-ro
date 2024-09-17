@@ -82,10 +82,21 @@ can_fm <- can_fm %>%
 
 
 df <- can_fm %>% 
-  mutate(indice = rank(-Tempo, ties.method = "first"))
-
-df <- df %>% 
-  filter(Tempo != 0)
+  mutate(indice = rank(-Tempo, ties.method = "first")) %>% 
+  filter(!(Tempo == '0' | Sexo == "MASCULINO")) %>% 
+  select(`Código do Paciente`,`Data de Nascimento`,Idade,`Raca/Cor`,`Grau de Instrução`,`Estado Civil`,
+         `Cidade Endereço`,`Código da Topografia`,`Data do Óbito`,`Data de Diagnostico`,Tempo,Status) %>% 
+  rename(
+    Cod_Paciente = `Código do Paciente`,
+    Data_Nasc = `Data de Nascimento`,
+    Etnia = `Raca/Cor`,
+    Escolaridade = `Grau de Instrução`,
+    Estado_Civil = `Estado Civil`,
+    Cidade = `Cidade Endereço`,
+    Cod_Topografia = `Código da Topografia`,
+    Data_Obito = `Data do Óbito`,
+    Data_Diagnostico = `Data de Diagnostico`
+  )
 
 #-------------------------------------------------------------------------------
 #
@@ -111,12 +122,14 @@ ui <- dashboardPage(
                menuSubItem("Tabela", tabName = "tabela")
       ),
       menuItem("Modelo Kaplan-Meier", tabName = "km", icon = icon("line-chart"),
-               menuSubItem("Kaplan-Meier", tabName = "km"),
-               menuSubItem("Teste de Log-Rank", tabName = "log-rank")),
+               menuSubItem("Geral", tabName = "km-geral"),
+               menuSubItem("Estado Civil", tabName = "km-estado-civil"),
+               menuSubItem("Escolaridade", tabName = "km-escolaridade"),
+               menuSubItem("Etnia", tabName = "km-etnia")),
       menuItem("Modelos Paramétricos", tabName = "parametric", icon = icon("bar-chart"),
-               menuSubItem("Modelo Exponencial", tabName = "exponencial"),
-               menuSubItem("Modelo Weibull", tabName = "demograficas"),
-               menuSubItem("Modelo Log-normal", tabName = "demograficas"))
+               menuSubItem("Paramétricos", tabName = "exponencial"),
+               menuSubItem("Avaliação dos Modelos", tabName = "demograficas"),
+               menuSubItem("Diagnóstico dos Modelos", tabName = "demograficas"))
     )
   ),
   dashboardBody(
@@ -148,16 +161,53 @@ ui <- dashboardPage(
       ),
       
       # Modelo Kaplan-Meier
-      tabItem(tabName = "km",
+      tabItem(tabName = "km-geral",
               fluidRow(
                 box(title = "Curva Kaplan-Meier", 
                     status = "warning", 
                     solidHeader = TRUE,
                     collapsible = TRUE,
-                    plotOutput("km_plot")
+                    plotOutput("km_geral")
                     )
               )
       ),
+      
+      # Modelo Kaplan-Meier - Estado Civil
+      tabItem(tabName = "km-estado-civil",
+              fluidRow(
+                box(title = "Curva Kaplan-Meier", 
+                    status = "warning", 
+                    solidHeader = TRUE,
+                    collapsible = TRUE,
+                    plotOutput("km_estado_civil")
+                )
+              )
+      ),
+      
+      # Modelo Kaplan-Meier - Escolaridade
+      tabItem(tabName = "km-escolaridade",
+              fluidRow(
+                box(title = "Curva Kaplan-Meier", 
+                    status = "warning", 
+                    solidHeader = TRUE,
+                    collapsible = TRUE,
+                    plotOutput("km_escolaridade")
+                )
+              )
+      ),
+      
+      # Modelo Kaplan-Meier - Etnia
+      tabItem(tabName = "km-etnia",
+              fluidRow(
+                box(title = "Curva Kaplan-Meier", 
+                    status = "warning", 
+                    solidHeader = TRUE,
+                    collapsible = TRUE,
+                    plotOutput("km_etnia")
+                )
+              )
+      ),
+      
       # Modelos Paramétricos
       tabItem(tabName = "exponencial",
               fluidRow(
@@ -204,9 +254,9 @@ server <- function(input, output) {
       )))
   })
   
-  output$km_plot <- renderPlot({
+  output$km_geral <- renderPlot({
     fit <- survfit(Surv(Tempo, Status) ~ 1, data = df)
-    g <- ggsurvplot(
+    g1 <- ggsurvplot(
       fit, data = df,
       pval = TRUE, 
       conf.int = TRUE,
@@ -220,8 +270,71 @@ server <- function(input, output) {
       # risk.table.y.text = TRUE,
       # ncensor.plot = TRUE,
     )
-    g$plot <- g$plot + theme(legend.title = element_blank())
-    print(g)
+    g1$plot <- g1$plot + theme(legend.title = element_blank())
+    print(g1)
+  })
+  
+  # 
+  output$km_estado_civil <- renderPlot({
+    fit <- survfit(Surv(Tempo, Status) ~ Estado_Civil, data = df)
+    g2 <- ggsurvplot(
+      fit, data = df,
+      pval = TRUE, 
+      conf.int = FALSE,
+      xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
+      break.time.by = 100,
+      ggtheme = theme_light(),
+      ylim = c(0.85,1),
+      xlim = c(0,1400)
+      # risk.table = "abs_pct",
+      # risk.table.y.text.col = TRUE,
+      # risk.table.y.text = TRUE,
+      # ncensor.plot = TRUE,
+    )
+    g2$plot <- g2$plot + theme(legend.title = element_blank())
+    print(g2)
+  })
+  
+  # 
+  output$km_escolaridade <- renderPlot({
+    fit <- survfit(Surv(Tempo, Status) ~ Escolaridade, data = df)
+    g3 <- ggsurvplot(
+      fit, data = df,
+      pval = TRUE, 
+      conf.int = FALSE,
+      xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
+      break.time.by = 100,
+      ggtheme = theme_light(),
+      ylim = c(0.85,1),
+      xlim = c(0,1400)
+      # risk.table = "abs_pct",
+      # risk.table.y.text.col = TRUE,
+      # risk.table.y.text = TRUE,
+      # ncensor.plot = TRUE,
+    )
+    g3$plot <- g3$plot + theme(legend.title = element_blank())
+    print(g3)
+  })
+  
+  # 
+  output$km_etnia <- renderPlot({
+    fit <- survfit(Surv(Tempo, Status) ~ Etnia, data = df)
+    g4 <- ggsurvplot(
+      fit, data = df,
+      pval = TRUE, 
+      conf.int = FALSE,
+      xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
+      break.time.by = 100,
+      ggtheme = theme_light(),
+      ylim = c(0.85,1),
+      xlim = c(0,1400)
+      # risk.table = "abs_pct",
+      # risk.table.y.text.col = TRUE,
+      # risk.table.y.text = TRUE,
+      # ncensor.plot = TRUE,
+    )
+    g4$plot <- g4$plot + theme(legend.title = element_blank())
+    print(g4)
   })
   
   output$parametric_plot <- renderPlot({
