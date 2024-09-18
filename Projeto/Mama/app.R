@@ -72,7 +72,7 @@ can_fm <- can_fm %>%
 max(can_fm$`Data do Óbito`, na.rm = T)
 
 # Substituir NA pela maior data do óbito.
-can_fm$`Data do Óbito` <- replace(can_fm$`Data do Óbito`, is.na(can_fm$`Data do Óbito`), as.Date("2018-10-11"))
+can_fm$`Data do Óbito` <- replace(can_fm$`Data do Óbito`, is.na(can_fm$`Data do Óbito`), as.Date("2019-12-31"))
 
 # Contagem do tempo.
 can_fm <- can_fm %>% 
@@ -115,17 +115,17 @@ ui <- dashboardPage(
     sidebarMenu(
       menuItem("Geral", tabName = 'geral', icon = icon("dashboard")),
       menuItem("Análise Exploratória", tabName = "AED", icon = icon("dashboard"),
+               menuSubItem("Mapa", tabName = "map"),
                menuSubItem("Demográficas", tabName = "demograficas"),
                menuSubItem("Morfológicas", tabName = "morfologicas"),
                menuSubItem("Tempo", tabName = "tempo"),
-               menuSubItem("Janela de Observação", tabName = "janela"),
+               menuSubItem("Observação", tabName = "janela-obs"),
                menuSubItem("Tabela", tabName = "tabela")
       ),
       menuItem("Modelo Kaplan-Meier", tabName = "km", icon = icon("line-chart"),
-               menuSubItem("Geral", tabName = "km-geral"),
-               menuSubItem("Estado Civil", tabName = "km-estado-civil"),
-               menuSubItem("Escolaridade", tabName = "km-escolaridade"),
-               menuSubItem("Etnia", tabName = "km-etnia")),
+               menuSubItem("Curva de Sobrevida", tabName = "km-geral"),
+               menuSubItem("Taxa de Falha", tabName = "km-"),
+               menuSubItem("Taxa de Falha Acumulada", tabName = "km-escolaridade")),
       menuItem("Modelos Paramétricos", tabName = "parametric", icon = icon("bar-chart"),
                menuSubItem("Paramétricos", tabName = "exponencial"),
                menuSubItem("Avaliação dos Modelos", tabName = "demograficas"),
@@ -142,14 +142,8 @@ ui <- dashboardPage(
       # Aba Geral
       tabItem(tabName = "geral",
               fluidRow(
-                box(title = "Demográficas", status = "primary", solidHeader = TRUE, 
-                    dataTableOutput("demograficas")),
-                box(title = "Morfológicas", status = "primary", solidHeader = TRUE, 
-                    dataTableOutput("morfologicas")),
-                box(title = "Tempo", status = "primary", solidHeader = TRUE, 
-                    dataTableOutput("tempo")),
-                box(title = "Tabela", status = "primary", solidHeader = TRUE, 
-                    dataTableOutput("tabela"))
+                box(title = "Janela de Observação", status = "primary", solidHeader = TRUE, 
+                    plotOutput("janela"))
               )
       ),
       
@@ -159,64 +153,32 @@ ui <- dashboardPage(
               dataTableOutput("tabela")
         
       ),
-      
-      # Modelo Kaplan-Meier
+      ###################################################
       tabItem(tabName = "km-geral",
               fluidRow(
-                box(title = "Curva Kaplan-Meier", 
-                    status = "warning", 
-                    solidHeader = TRUE,
-                    collapsible = TRUE,
-                    plotOutput("km_geral")
-                    )
-              )
-      ),
-      
-      # Modelo Kaplan-Meier - Estado Civil
-      tabItem(tabName = "km-estado-civil",
-              fluidRow(
-                box(title = "Curva Kaplan-Meier", 
-                    status = "warning", 
-                    solidHeader = TRUE,
-                    collapsible = TRUE,
-                    plotOutput("km_estado_civil")
+                tabBox(
+                  title = "Curva de Kaplan-Meier",
+                  # The id lets us use input$tabset1 on the server to find the current tab
+                  id = "tabset2", height = "300px",
+                  tabPanel("Geral", plotOutput('km_geral')),
+                  tabPanel("Estado Civil", plotOutput('km_estado_civil')),
+                  tabPanel("Escolaridade", plotOutput('km_escolaridade')),
+                  tabPanel("Etnia", plotOutput('km_etnia'))
                 )
               )
       ),
       
-      # Modelo Kaplan-Meier - Escolaridade
-      tabItem(tabName = "km-escolaridade",
-              fluidRow(
-                box(title = "Curva Kaplan-Meier", 
-                    status = "warning", 
-                    solidHeader = TRUE,
-                    collapsible = TRUE,
-                    plotOutput("km_escolaridade")
-                )
-              )
-      ),
-      
-      # Modelo Kaplan-Meier - Etnia
-      tabItem(tabName = "km-etnia",
-              fluidRow(
-                box(title = "Curva Kaplan-Meier", 
-                    status = "warning", 
-                    solidHeader = TRUE,
-                    collapsible = TRUE,
-                    plotOutput("km_etnia")
-                )
-              )
-      ),
-      
-      # Modelos Paramétricos
+     # Modelos Paramétricos
       tabItem(tabName = "exponencial",
               fluidRow(
                 tabBox(
                   title = "Modelos Paramétricos",
                   # The id lets us use input$tabset1 on the server to find the current tab
                   id = "tabset1", height = "250px",
-                  tabPanel("Sobrevida", "First tab content"),
-                  tabPanel("Tab2", "Tab content 2")
+                  tabPanel("Exponencial", "First tab content"),
+                  tabPanel("Weibull", "Tab content 2"),
+                  tabPanel("Log-normal", "Tab content 2"),
+                  tabPanel("Log-logístico", "Tab content 2")
                 )
       )
     )
@@ -238,8 +200,32 @@ server <- function(input, output) {
     
   })
   
-  output$clin<- renderDataTable({
+  output$janela<- renderPlot({
     # Substitua pelo seu dataset patológico
+    df1 <- df %>% 
+      mutate(indice = rank(-Tempo, ties.method = "first"))
+    
+    
+    # Criar o gráfico
+    j1 <- ggplot(df1, aes(x = Tempo, y = indice, color = as.factor(Status), label = ifelse(Status == 1, "Falha", "Censura"))) +
+      geom_segment(aes(x = 0, xend = Tempo, y = indice, yend = indice), size = 1) +  # Linhas horizontais iniciadas em zero
+      geom_point(aes(shape = as.factor(Status)), size = 1) +  # Pontos para eventos
+      scale_color_manual(values = c("#8AC", "red"), labels = c("Censura", "Falha")) +
+      scale_shape_manual(values = c(16, 16), labels = c("Censura", "Falha")) +  # Define os formatos dos pontos
+      labs(
+        title = "Tempo de Sobrevida",
+        x = "Tempo (dias)",
+        y = "Pacientes",
+        color = "Status",
+        shape = "Status"
+      ) +
+      theme_minimal() +
+      theme(
+        legend.position = "right",
+        axis.text.x = element_text(angle = 45, hjust = 1)
+      )
+    
+    print(j1)
     
   })
     #

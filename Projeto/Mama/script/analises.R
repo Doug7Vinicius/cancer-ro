@@ -14,8 +14,8 @@ mama <- df
 
 mama <- mama %>% 
   mutate(Faixa_etária = cut(Idade,
-                            breaks = c(-Inf, 40,50,Inf),
-                            labels = c("Menos de 40 anos","Entre 40 a 50","Acima de 50 anos")))
+                            breaks = c(-Inf, 39,40,50,60,Inf),
+                            labels = c("Menos de 40 anos","Entre 40 a 50","Entre 50 a  anos")))
 
 
 
@@ -85,7 +85,7 @@ can_fm <- can_fm %>%
 
 
 
-df <- can_fm %>% 
+df <- df %>% 
   mutate(indice = rank(-Tempo, ties.method = "first"))
 
 df <- df %>% 
@@ -317,3 +317,80 @@ plot(resid_weibull)
 
 
 snell <- -log(1 - pnorm(padr.log))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+library(shiny)
+library(shinydashboard)
+library(sf)
+library(leaflet)
+library(dplyr)
+
+# Carregar dados geográficos (shapefile de Rondônia)
+shapefile_path <- "C:\\Users\\44735\\Downloads\\RO_Municipios_2022\\RO_Municipios_2022.shp"
+rondonia_map <- st_read(shapefile_path)
+
+# Dados fictícios de incidência de câncer por município
+cancer_data <- data.frame(
+  Municipio = base1$`Cidade Endereço`,
+  Incidencia = base1$n
+)
+
+# Juntar os dados geográficos com os dados de incidência
+map_data <- rondonia_map %>%
+  left_join(cancer_data, by = c("NM_MUN" = "Municipio"))
+
+# Interface do usuário
+ui <- dashboardPage(
+  dashboardHeader(title = "Mapa Coroplético - Incidência de Câncer"),
+  dashboardSidebar(),
+  dashboardBody(
+    leafletOutput("cancer_map")
+  )
+)
+
+# Servidor
+server <- function(input, output, session) {
+  
+  output$cancer_map <- renderLeaflet({
+    leaflet(data = map_data) %>%
+      addTiles() %>%
+      addPolygons(
+        fillColor = ~colorNumeric("YlOrRd", Incidencia)(Incidencia),
+        weight = 1,
+        opacity = 1,
+        color = "white",
+        dashArray = "3",
+        fillOpacity = 0.7,
+        highlight = highlightOptions(
+          weight = 2,
+          color = "#666",
+          dashArray = "",
+          fillOpacity = 0.7,
+          bringToFront = TRUE
+        ),
+        label = ~paste(NM_MUN, ":", Incidencia)
+      ) %>%
+      addLegend(pal = colorNumeric("YlOrRd", map_data$Incidencia),
+                values = map_data$Incidencia, opacity = 0.7,
+                title = "Incidência de Câncer",
+                position = "bottomright")
+  })
+}
+
+# Executar o aplicativo
+shinyApp(ui, server)
