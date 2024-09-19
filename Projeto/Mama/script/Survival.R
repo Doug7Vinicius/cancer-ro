@@ -36,7 +36,7 @@ df1 <- df1 %>%
 
 
 
-fit <- survfit(Surv(Tempo, Status) ~ 1, data = df1)
+fit <- survfit(Surv(Tempo, Status) ~ 1, data = df)
 
 d <- data.frame(time = fit$time,
                 n.risk = fit$n.risk,
@@ -47,7 +47,7 @@ d <- data.frame(time = fit$time,
                 lower = fit$lower)
 
 ggsurvplot(
-  fit, data = df1,
+  fit, data = df,
   pval = TRUE, 
   conf.int = TRUE,
   xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
@@ -61,11 +61,11 @@ ggsurvplot(
 )
 
 
-tmp = df1 %>% 
+tmp = df %>% 
   select(Idade, Tempo) %>% 
   pivot_longer(everything())
 
-g1 <- ggplot(tmp, aes(x = value)) + 
+t1 <- ggplot(tmp, aes(x = value)) + 
   geom_histogram(aes(y = ..density..), alpha = 0.5) +
   geom_density() +
   facet_wrap(. ~ name, scales = "free") +
@@ -74,11 +74,11 @@ g1 <- ggplot(tmp, aes(x = value)) +
 
 
 
-tmp = df1 %>%
+tmp = df %>%
   select(Status,Idade,Tempo) %>%
   pivot_longer(-one_of("Status")) %>%
   mutate(had_event = ifelse(Status == 0,"Censura", "Falha"))
-g2 <- ggplot(tmp, aes(x = value)) +
+t2 <- ggplot(tmp, aes(x = value)) +
   geom_density(aes(color = had_event)) +
   facet_wrap(. ~ name, scales = "free") +
   theme(text = element_text(size = 15),
@@ -86,16 +86,16 @@ g2 <- ggplot(tmp, aes(x = value)) +
         legend.position = "top") +
   xlab("") + ylab("Densidade")
 
-g1 / g2
+t1 / t2
 
-plot_bar(df1 %>%
+plot_bar(df %>%
            select(Estado_Civil, Escolaridade, Status),
          theme_config=list(text = element_text(size = 10)),
          ncol = 3,
          order_bar=TRUE)
 
-tmp = df1 %>%
-  select(Status, Estado_Civil, Escolaridade) %>%
+tmp = df %>%
+  select(Status, Estado_Civil, Escolaridade, Etnia) %>%
   mutate(Status = ifelse(Status == 0,"Censura", "Falha"),
          Estado_civil = factor(Estado_Civil)) %>%
   pivot_longer(-one_of("Status")) %>%
@@ -109,7 +109,7 @@ ggplot(tmp, aes(x = value, y = count)) +
         legend.position = "top")
 
 scattervars <- c("Idade", "Tempo")
-time_df <- df1 %>% 
+time_df <- df %>% 
   select(all_of(scattervars)) %>%
   pivot_longer(cols=-Tempo, names_to="variable")
 
@@ -117,9 +117,9 @@ ggplot(time_df, aes(x=Tempo, y=value)) +
   geom_jitter() +
   facet_wrap(vars(variable), nrow=2, scales="free")
 
-Surv(df1$Tempo, df1$Status)[1:10]
+Surv(df$Tempo, df$Status)[1:10]
 
-fit_overall = survfit(Surv(Tempo, Status) ~ 1, data = df1)
+fit_overall = survfit(Surv(Tempo, Status) ~ 1, data = df)
 print(fit_overall)
 
 # Tabela de Sobrevida
@@ -137,10 +137,10 @@ ggsurvplot(fit_overall,
            surv.median.line = "hv")
 
 # 
-km_sex = survfit(Surv(Tempo, Status) ~ , data = df1)
+km_sex = survfit(Surv(Tempo, Status) ~ , data = df)
 print(km_sex)
 
-ggsurvplot(survfit(Surv(Tempo, Status) ~ Sexo, data = baselimpa), # modelo de sobrevivencia.
+ggsurvplot(survfit(Surv(Tempo, Status) ~ Sexo, data = ), # modelo de sobrevivencia.
            xlab = "Dias", 
            ylab = "Probabilidade de Sobrevida",
            pval = TRUE, 
@@ -185,7 +185,7 @@ ggsurvplot(survfit(Surv(Tempo, Status) ~ Sexo, data = baselimpa),
            ggtheme = theme_bw(), 
            fun = "cumhaz")
 
-fit_overall = survfit(Surv(Tempo, Status) ~ 1, data = baselimpa)
+fit_overall = survfit(Surv(Tempo, Status) ~ 1, data = df)
 surv_times <- c(0, 0.5*365, 365, 1.5*365, 2*365)
 
 gg_conditional_surv(
@@ -195,7 +195,7 @@ gg_conditional_surv(
   ylab = "Probabilidade de Sobrevivência",
   xlab = "Dias"
 ) +
-  labs(color = "Tempo condicional") + ylim(c(0.7,1))
+  labs(color = "Tempo condicional") + ylim(c(0.85,1))
 
 conditional_surv_est(fit_overall, t1=0, t2=2*365)
 
@@ -203,10 +203,10 @@ surv_times <- c(0.25*365, 0.5*365, 365, 1.5*365, 2*365)
 
 
 
-cox_esc = coxph(Surv(Tempo, Status) ~ Escolaridade, data = df1)
+cox_esc = coxph(Surv(Tempo, Status) ~ Escolaridade, data = df)
 print(cox_esc)
 
-survdiff(Surv(Tempo, Status) ~ Escolaridade, data = df1)
+survdiff(Surv(Tempo, Status) ~ Escolaridade, data = df)
 
 test.ph <- cox.zph(cox_esc)
 print(test.ph)

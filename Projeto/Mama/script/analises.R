@@ -15,7 +15,8 @@ mama <- df
 mama <- mama %>% 
   mutate(Faixa_etária = cut(Idade,
                             breaks = c(-Inf, 39,40,50,60,Inf),
-                            labels = c("Menos de 40 anos","Entre 40 a 50","Entre 50 a  anos")))
+                            labels = c("Menos de 40 anos","Entre 40 a 49 anos",
+                                       "Entre 50 a 60 anos", "Acima de 60 anos")))
 
 
 
@@ -317,6 +318,33 @@ plot(resid_weibull)
 
 
 snell <- -log(1 - pnorm(padr.log))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

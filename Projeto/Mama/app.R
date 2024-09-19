@@ -24,6 +24,11 @@ library(shinydashboard)
 library(readr)
 library(DT)
 library(plotly)
+library(sf)
+library(leaflet)
+
+#
+
 
 # Importar os dados.
 #-------------------------------------------------------------------------------
@@ -72,7 +77,7 @@ can_fm <- can_fm %>%
 max(can_fm$`Data do Óbito`, na.rm = T)
 
 # Substituir NA pela maior data do óbito.
-can_fm$`Data do Óbito` <- replace(can_fm$`Data do Óbito`, is.na(can_fm$`Data do Óbito`), as.Date("2019-12-31"))
+can_fm$`Data do Óbito` <- replace(can_fm$`Data do Óbito`, is.na(can_fm$`Data do Óbito`), as.Date("2018-10-11"))
 
 # Contagem do tempo.
 can_fm <- can_fm %>% 
@@ -82,7 +87,6 @@ can_fm <- can_fm %>%
 
 
 df <- can_fm %>% 
-  mutate(indice = rank(-Tempo, ties.method = "first")) %>% 
   filter(!(Tempo == '0' | Sexo == "MASCULINO")) %>% 
   select(`Código do Paciente`,`Data de Nascimento`,Idade,`Raca/Cor`,`Grau de Instrução`,`Estado Civil`,
          `Cidade Endereço`,`Código da Topografia`,`Data do Óbito`,`Data de Diagnostico`,Tempo,Status) %>% 
@@ -98,6 +102,46 @@ df <- can_fm %>%
     Data_Diagnostico = `Data de Diagnostico`
   )
 
+#df$Etnia <- ifelse(df$Etnia == "PARDA", "PARDA", 
+#                  ifelse(df$Etnia == "BRANCO", "BRANCO", "OUTROS"))
+#df$Estado_Civil <- ifelse(df$Estado_Civil == "CASADO", "CASADO", "OUTROS")
+#df$Escolaridade <- ifelse(df$Escolaridade == "FUNDAMENTAL I (1ª A 4ª SÉRIE)", "FUNDAMENTAL I (1ª A 4ª SÉRIE)", 
+#                          ifelse(df$Escolaridade == "FUNDAMENTAL II (5ª A 8ª SÉRIE)", "FUNDAMENTAL II (5ª A 8ª SÉRIE)",
+#                                 ifelse(df$Escolaridade == 'MÉDIO (ANTIGO SEGUNDO GRAU)', "MÉDIO (ANTIGO SEGUNDO GRAU)", "OUTROS")))
+
+
+
+
+
+
+
+# Carregar dados geográficos (shapefile de Rondônia)
+shapefile_path <- "C:\\Users\\44735\\Downloads\\RO_Municipios_2022\\RO_Municipios_2022.shp"
+rondonia_map <- st_read(shapefile_path)
+
+#
+base1$Cidade <- str_to_title(base1$Cidade)
+
+ajustar_nomes <- function(nome) {
+  nome <- gsub("Do Oeste", "D'Oeste", nome, ignore.case = TRUE)
+  nome <- gsub("D'oeste", "D'Oeste", nome, ignore.case = TRUE)
+  nome <- gsub("do oeste", "D'Oeste", nome, ignore.case = TRUE)
+  return(nome)
+}
+
+base1$Cidade <- ajustar_nomes(base1$Cidade)
+
+# Dados fictícios de incidência de câncer por município
+cancer_data <- data.frame(
+  Municipio = base1$Cidade,
+  Incidencia = base1$n
+)
+
+
+# Juntar os dados geográficos com os dados de incidência
+map_data <- rondonia_map %>%
+  left_join(cancer_data, by = c("NM_MUN" = "Municipio")) %>%
+  mutate(Incidencia = ifelse(is.na(Incidencia), 0, Incidencia))  # Substituir NA por 0
 #-------------------------------------------------------------------------------
 #
 ui <- dashboardPage(
@@ -124,8 +168,8 @@ ui <- dashboardPage(
       ),
       menuItem("Modelo Kaplan-Meier", tabName = "km", icon = icon("line-chart"),
                menuSubItem("Curva de Sobrevida", tabName = "km-geral"),
-               menuSubItem("Taxa de Falha", tabName = "km-"),
-               menuSubItem("Taxa de Falha Acumulada", tabName = "km-escolaridade")),
+               menuSubItem("Taxa de Falha", tabName = "taxa-falha"),
+               menuSubItem("Taxa de Falha Acumulada", tabName = "taxa-acumulada")),
       menuItem("Modelos Paramétricos", tabName = "parametric", icon = icon("bar-chart"),
                menuSubItem("Paramétricos", tabName = "exponencial"),
                menuSubItem("Avaliação dos Modelos", tabName = "demograficas"),
@@ -137,15 +181,51 @@ ui <- dashboardPage(
       tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
       tags$script(src = "custom.js") # Inclui o JavaScript
     ),
+    
+    #
+    tabItems(
+      tabItem(tabName = "morfologicas",
+              fluidRow(
+                box(title = "Freq",
+                    status = "primary",
+                    solidHeader = TRUE,
+                    height = 800,
+                    width = 12,
+                    plotOutput("morfologicas", height = "900px"))
+              ))
+    ),
+    
     #
     tabItems(
       # Aba Geral
-      tabItem(tabName = "geral",
+      tabItem(tabName = "janela-obs",
               fluidRow(
-                box(title = "Janela de Observação", status = "primary", solidHeader = TRUE, 
-                    plotOutput("janela"))
+                box(title = "Janela de Observação", 
+                    status = "primary", 
+                    solidHeader = TRUE,
+                    height = 800,
+                    width = 7,
+                    plotlyOutput("janela", height = "700px"))
               )
       ),
+      
+      
+      #
+      tabItem(tabName = "map",
+              fluidRow(
+                box(title = "Mapa de Incidência de Câncer no Estado de Rondônia", 
+                    status = "primary",
+                    width = 8,
+                    height = 800,
+                    solidHeader = TRUE,
+                    leafletOutput("cancer_map", height = "740px")),
+                br(),
+                textOutput("selected_municipio")
+              )),
+      
+
+      
+      # Menu Análise Exploratória
       
       # 
       tabItem(tabName = "tabela",
@@ -157,13 +237,32 @@ ui <- dashboardPage(
       tabItem(tabName = "km-geral",
               fluidRow(
                 tabBox(
-                  title = "Curva de Kaplan-Meier",
-                  # The id lets us use input$tabset1 on the server to find the current tab
-                  id = "tabset2", height = "300px",
-                  tabPanel("Geral", plotOutput('km_geral')),
+                  title = "Curvas de Kaplan-Meier",
+                  id = "tabset2", 
+                  height = "400px",
+                  width = 7,
+                  tabPanel("Geral", plotOutput('km_geral', height = "400px")),
                   tabPanel("Estado Civil", plotOutput('km_estado_civil')),
                   tabPanel("Escolaridade", plotOutput('km_escolaridade')),
-                  tabPanel("Etnia", plotOutput('km_etnia'))
+                  tabPanel("Etnia", plotOutput('km_etnia')),
+                  tabPanel("Idade", plotlyOutput('km_idade', 
+                                                 height = 500))
+                )
+              )
+      ),
+      
+      ###################################################
+      tabItem(tabName = "taxa-falha",
+              fluidRow(
+                tabBox(
+                  title = "Taxa de Falha",
+                  id = "tabset3", 
+                  height = "400px",
+                  width = 7,
+                  tabPanel("Geral", plotOutput('tx_geral', height = "400px")),
+                  tabPanel("Estado Civil", plotOutput('tx_estado_civil')),
+                  tabPanel("Escolaridade", plotOutput('tx_escolaridade')),
+                  tabPanel("Etnia", plotOutput('tx_etnia'))
                 )
               )
       ),
@@ -173,7 +272,6 @@ ui <- dashboardPage(
               fluidRow(
                 tabBox(
                   title = "Modelos Paramétricos",
-                  # The id lets us use input$tabset1 on the server to find the current tab
                   id = "tabset1", height = "250px",
                   tabPanel("Exponencial", "First tab content"),
                   tabPanel("Weibull", "Tab content 2"),
@@ -190,30 +288,72 @@ ui <- dashboardPage(
 #
 server <- function(input, output) {
   
-  output$demograficas <- renderDataTable({
+  output$cancer_map <- renderLeaflet({
+    leaflet(data = map_data) %>%
+      addTiles() %>%
+      addPolygons(
+        fillColor = ~colorNumeric("YlOrRd", Incidencia)(Incidencia),
+        weight = 2,  # Peso da borda
+        opacity = 1,
+        color = "black",  # Cor da borda dos municípios
+        dashArray = "",
+        fillOpacity = 0.7,
+        highlight = highlightOptions(
+          weight = 3,  # Peso da borda ao destacar
+          color = "#666",
+          dashArray = "",
+          fillOpacity = 0.7,
+          bringToFront = TRUE
+        ),
+        label = ~paste(NM_MUN, ":", Incidencia),
+        layerId = ~NM_MUN  # Identificador do município
+      ) %>%
+      addLegend(pal = colorNumeric("YlOrRd", map_data$Incidencia),
+                values = map_data$Incidencia, opacity = 0.7,
+                title = "Incidência de Câncer",
+                position = "bottomright")
+  })
+  
+  # Observar cliques no mapa
+  observeEvent(input$cancer_map_shape_click, {
+    clicked_municipio <- input$cancer_map_shape_click$id  # Obter o ID do município clicado
+    output$selected_municipio <- renderText({
+      paste("Município selecionado:", clicked_municipio)
+    })
+  })
+  
+  
+
+## Menu Modelos Paramétricos    
+
+    output$demograficas <- renderDataTable({
     # Substitua pelo seu dataset demográfico
   
   })
   
-  output$morfologicas <- renderDataTable({
+  output$morfologicas <- renderPlot({
     # Substitua pelo seu dataset morfológico
-    
+    m1 <- plot_bar(df %>%
+               select(Estado_Civil, Escolaridade, Etnia, Status),
+             theme_config=list(text = element_text(size = 10)),
+             ncol = 2,
+             order_bar=TRUE) + geom_text(stat='count', aes(label=..count..), vjust=-0.5, size=3)
+    print(m1)
   })
   
-  output$janela<- renderPlot({
+  output$janela <- renderPlotly({
     # Substitua pelo seu dataset patológico
     df1 <- df %>% 
       mutate(indice = rank(-Tempo, ties.method = "first"))
     
-    
-    # Criar o gráfico
+    # Criar o gráfico usando ggplot
     j1 <- ggplot(df1, aes(x = Tempo, y = indice, color = as.factor(Status), label = ifelse(Status == 1, "Falha", "Censura"))) +
       geom_segment(aes(x = 0, xend = Tempo, y = indice, yend = indice), size = 1) +  # Linhas horizontais iniciadas em zero
-      geom_point(aes(shape = as.factor(Status)), size = 1) +  # Pontos para eventos
+      geom_point(aes(shape = as.factor(Status)), size = 0) +  # Pontos para eventos
       scale_color_manual(values = c("#8AC", "red"), labels = c("Censura", "Falha")) +
       scale_shape_manual(values = c(16, 16), labels = c("Censura", "Falha")) +  # Define os formatos dos pontos
       labs(
-        title = "Tempo de Sobrevida",
+        title = "",
         x = "Tempo (dias)",
         y = "Pacientes",
         color = "Status",
@@ -225,8 +365,8 @@ server <- function(input, output) {
         axis.text.x = element_text(angle = 45, hjust = 1)
       )
     
-    print(j1)
-    
+    # Converter para plotly para interatividade
+    ggplotly(j1)
   })
     #
   output$tabela <- renderDT({
@@ -239,7 +379,9 @@ server <- function(input, output) {
         search = "Pesquisar"
       )))
   })
-  
+
+## Menu Modelo Kaplan-Meier
+  #
   output$km_geral <- renderPlot({
     fit <- survfit(Surv(Tempo, Status) ~ 1, data = df)
     g1 <- ggsurvplot(
@@ -260,6 +402,13 @@ server <- function(input, output) {
     print(g1)
   })
   
+  output$tx_geral <- renderPlot({
+    #
+    hazard_geral <- -log(fit$surv) / fit$time
+    #
+    h1 <- plot(fit$time, hazard_geral, type = "l", xlab = "Tempo", ylab = "Taxa de Falha")
+  })
+
   # 
   output$km_estado_civil <- renderPlot({
     fit <- survfit(Surv(Tempo, Status) ~ Estado_Civil, data = df)
@@ -323,17 +472,37 @@ server <- function(input, output) {
     print(g4)
   })
   
-  output$parametric_plot <- renderPlot({
-    # Modelo Exponencial
+  # 
+  output$km_idade <- renderPlotly({
+    # Ajuste do modelo Kaplan-Meier
+    fit <- survfit(Surv(Tempo, Status) ~ Faixa_etária, data = df1)
     
-    # Modelo Weibull
+    # Criação do gráfico Kaplan-Meier com ggsurvplot
+    g5 <- ggsurvplot(
+      fit, data = df1,
+      pval = TRUE, 
+      conf.int = FALSE,
+      xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
+      break.time.by = 100,
+      ggtheme = theme_light(),
+      ylim = c(0.85, 1),
+      xlim = c(0, 1400)
+      # risk.table = "abs_pct",
+      # risk.table.y.text.col = TRUE,
+      # risk.table.y.text = TRUE,
+      # ncensor.plot = TRUE,
+    )
     
-    # Modelo Log-normal
+    # Ajuste adicional no tema do gráfico
+    g5$plot <- g5$plot + theme(legend.title = element_blank())
     
-    # Modelo Log-logístico
-    
-    
+    # Conversão do gráfico para um objeto plotly
+    ggplotly(g5$plot)
   })
+  
+## Menu Modelos Paramétricos
+  
+
 }
 
 #
