@@ -162,11 +162,17 @@ ajust3
 ajust4 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'loglogistic', data = df)
 ajust4
 
-#
-ajust5 <- flexsurvreg(Surv(Tempo, Status) ~ 1, dist = 'gompertz', data = df)
-ajust5
+intercept4 <- ajust4$coefficients[1]
+scale4 <- ajust4$scale
 
-stgom <- exp((-1/-0.001091)*0.000173*(exp(-0.001091*time) - 1))
+# Distribuição Gompertz
+ajust5 <- flexsurvreg(Surv(Tempo, Status) ~ 1, dist = 'gompertz', data = df)
+
+intercept5 <- ajust5$coefficients[1]  # Localização (Intercepto)
+scale5 <- ajust5$scale  # Parâmetro de forma
+
+lambda5 <- exp(ajust5$coefficients[1])  # Converte o intercepto para o parâmetro de taxa
+theta5 <- exp(ajust5$coefficients[2])  # O inverso da escala é o parâmetro de forma
 
 #
 time <- fit_overall$time
@@ -174,33 +180,34 @@ st <- fit_overall$surv
 ste <- exp(-time/9051.529)
 stw <- exp(-(time/19118.27)^0.7583723)
 stln <- pnorm((-log(time) + 10.61644)/2.893923)
-stlog <- 1/(1 + (0.2483866*time)^(9.7051755))
-cbind(time, st, ste, stw, stln, stlog) %>% head()
+stlog <- 1 / (1 + (exp(-intercept4) * time)^(1/scale4))
+stgom <- exp(-lambda5 / theta5 * (exp(theta5 * time) - 1))
+cbind(time, st, ste, stw, stln, stlog, stgom) %>% head()
 
 #
-par(mfrow = c(1,3))
-plot(ste,st, pch = 16, ylim = range(c(0.7,1)), xlim = range(c(0.6,1)), ylab = 'S(t): Kaplan-Meier',
+par(mfrow = c(1,5))
+plot(ste,st, pch = 16, ylim = range(c(0.85,1)), xlim = range(c(0.85,1)), ylab = 'S(t): Kaplan-Meier',
      xlab = 'S(t): Exponencial')
 lines(c(0,1), c(0,1), type = 'l', lty = 1)
 
-plot(stw,st, pch = 16, ylim = range(c(0.7,1)), xlim = range(c(0.6,1)), ylab = 'S(t): Kaplan-Meier',
+plot(stw,st, pch = 16, ylim = range(c(0.85,1)), xlim = range(c(0.85,1)), ylab = 'S(t): Kaplan-Meier',
      xlab = 'S(t): Weibull')
 lines(c(0,1), c(0,1), type = 'l', lty = 1)
 
-plot(stln,st, pch = 16, ylim = range(c(0.7,1)), xlim = range(c(0.6,1)), ylab = 'S(t): Kaplan-Meier',
+plot(stln,st, pch = 16, ylim = range(c(0.85,1)), xlim = range(c(0.85,1)), ylab = 'S(t): Kaplan-Meier',
      xlab = 'S(t): Log-normal')
 lines(c(0,1), c(0,1), type = 'l', lty = 1)
 
-plot(stlog,st, pch = 16, ylim = range(c(0.7,1)), xlim = range(c(0.6,1)), ylab = 'S(t): Kaplan-Meier',
+plot(stlog,st, pch = 16, ylim = range(c(0.85,1)), xlim = range(c(0.85,1)), ylab = 'S(t): Kaplan-Meier',
      xlab = 'S(t): Log-logistico')
 lines(c(0,1), c(0,1), type = 'l', lty = 1)
 
-plot(stgom,st, pch = 16, ylim = range(c(0.7,1)), xlim = range(c(0.6,1)), ylab = 'S(t): Kaplan-Meier',
+plot(stgom,st, pch = 16, ylim = range(c(0.85,1)), xlim = range(c(0.85,1)), ylab = 'S(t): Kaplan-Meier',
      xlab = 'S(t): Gompertz')
 lines(c(0,1), c(0,1), type = 'l', lty = 1)
 
 #
-par(mfrow = c(1,4))
+par(mfrow = c(1,5))
 plot(fit_overall, conf.int = F, xlab = 'Tempo', ylab = 'S(t)', main = 'Exponencial', ylim = c(0.85,1))
 lines(c(0,time), c(1,ste), lty = 2)
 
@@ -334,91 +341,159 @@ snell <- -log(1 - pnorm(padr.log))
 
 
 
+# Calcular as funções de sobrevivência
+time <- fit_overall$time
+st <- fit_overall$surv
+ste <- exp(-time / 9051.529)
+stw <- exp(-(time / 19118.27) ^ 0.7583723)
+stln <- pnorm((-log(time) + 10.61644) / 2.893923)
+stlog <- 1 / (1 + (exp(-intercept4) * time)^(1 / scale4))
+stgom <- exp(-lambda5 / theta5 * (exp(theta5 * time) - 1))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-library(shiny)
-library(shinydashboard)
-library(sf)
-library(leaflet)
-library(dplyr)
-
-# Carregar dados geográficos (shapefile de Rondônia)
-shapefile_path <- "C:\\Users\\44735\\Downloads\\RO_Municipios_2022\\RO_Municipios_2022.shp"
-rondonia_map <- st_read(shapefile_path)
-
-# Dados fictícios de incidência de câncer por município
-cancer_data <- data.frame(
-  Municipio = base1$`Cidade Endereço`,
-  Incidencia = base1$n
+# Criar um dataframe
+data <- data.frame(
+  time = time,
+  st = st,
+  ste = ste,
+  stw = stw,
+  stln = stln,
+  stlog = stlog,
+  stgom = stgom
 )
 
-# Juntar os dados geográficos com os dados de incidência
-map_data <- rondonia_map %>%
-  left_join(cancer_data, by = c("NM_MUN" = "Municipio"))
+# Criar os gráficos
+plot_exponential <- ggplot(data, aes(x = ste, y = st)) +
+  geom_line(color = "blue") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(x = 'S(t): Exponencial', y = 'S(t): Kaplan-Meier') +
+  xlim(0.85, 1) + ylim(0.85, 1)
 
-# Interface do usuário
-ui <- dashboardPage(
-  dashboardHeader(title = "Mapa Coroplético - Incidência de Câncer"),
-  dashboardSidebar(),
-  dashboardBody(
-    leafletOutput("cancer_map")
-  )
-)
+plot_weibull <- ggplot(data, aes(x = stw, y = st)) +
+  geom_line(color = "blue") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(x = 'S(t): Weibull', y = 'S(t): Kaplan-Meier') +
+  xlim(0.85, 1) + ylim(0.85, 1)
 
-# Servidor
-server <- function(input, output, session) {
-  
-  output$cancer_map <- renderLeaflet({
-    leaflet(data = map_data) %>%
-      addTiles() %>%
-      addPolygons(
-        fillColor = ~colorNumeric("YlOrRd", Incidencia)(Incidencia),
-        weight = 1,
-        opacity = 1,
-        color = "white",
-        dashArray = "3",
-        fillOpacity = 0.7,
-        highlight = highlightOptions(
-          weight = 2,
-          color = "#666",
-          dashArray = "",
-          fillOpacity = 0.7,
-          bringToFront = TRUE
-        ),
-        label = ~paste(NM_MUN, ":", Incidencia)
-      ) %>%
-      addLegend(pal = colorNumeric("YlOrRd", map_data$Incidencia),
-                values = map_data$Incidencia, opacity = 0.7,
-                title = "Incidência de Câncer",
-                position = "bottomright")
-  })
-}
+plot_lognormal <- ggplot(data, aes(x = stln, y = st)) +
+  geom_line(color = "blue") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(x = 'S(t): Log-normal', y = 'S(t): Kaplan-Meier') +
+  xlim(0.85, 1) + ylim(0.85, 1)
 
-# Executar o aplicativo
-shinyApp(ui, server)
+plot_loglogistic <- ggplot(data, aes(x = stlog, y = st)) +
+  geom_line(color = "blue") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(x = 'S(t): Log-logístico', y = 'S(t): Kaplan-Meier') +
+  xlim(0.85, 1) + ylim(0.85, 1)
+
+plot_gompertz <- ggplot(data, aes(x = stgom, y = st)) +
+  geom_line(color = "blue") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(x = 'S(t): Gompertz', y = 'S(t): Kaplan-Meier') +
+  xlim(0.85, 1) + ylim(0.85, 1)
+
+# Juntar os gráficos lado a lado
+combined_plot <- plot_exponential + plot_weibull + plot_lognormal + plot_loglogistic + plot_gompertz +
+  plot_layout(ncol = 5)
+
+# Exibir o gráfico combinado
+print(combined_plot)
+
+
+
+
+
+
+# Criar os gráficos
+plot_exponential <- ggplot(data, aes(x = time)) +
+  geom_step(aes(y = st), color = "black") +
+  geom_line(aes(y = ste), linetype = "dashed", color = "blue") +
+  labs(title = "Exponencial", x = 'Tempo', y = 'S(t)') +
+  ylim(0.85, 1)
+
+plot_weibull <- ggplot(data, aes(x = time)) +
+  geom_step(aes(y = st), color = "black") +
+  geom_line(aes(y = stw), linetype = "dashed", color = "red") +
+  labs(title = "Weibull", x = 'Tempo', y = 'S(t)') +
+  ylim(0.85, 1)
+
+plot_lognormal <- ggplot(data, aes(x = time)) +
+  geom_step(aes(y = st), color = "black") +
+  geom_line(aes(y = stln), linetype = "dashed", color = "green") +
+  labs(title = "Log-normal", x = 'Tempo', y = 'S(t)') +
+  ylim(0.85, 1)
+
+plot_loglogistic <- ggplot(data, aes(x = time)) +
+  geom_step(aes(y = st), color = "black") +
+  geom_line(aes(y = stlog), linetype = "dashed", color = "purple") +
+  labs(title = "Log-logístico", x = 'Tempo', y = 'S(t)') +
+  ylim(0.85, 1)
+
+plot_gompertz <- ggplot(data, aes(x = time)) +
+  geom_step(aes(y = st), color = "black") +
+  geom_line(aes(y = stgom), linetype = "dashed", color = "orange") +
+  labs(title = "Gompertz", x = 'Tempo', y = 'S(t)') +
+  ylim(0.85, 1)
+
+# Juntar os gráficos lado a lado
+combined_plot <- plot_exponential + plot_weibull + plot_lognormal + plot_loglogistic + plot_gompertz +
+  plot_layout(ncol = 5)
+
+# Exibir o gráfico combinado
+print(combined_plot)
+
+
+
+
+
+
+
+
+
+g6 <- ggplot(data, aes(x = time)) +
+  geom_step(aes(y = st), color = "black", size = 1, linetype = "solid") +  # Kaplan-Meier
+  geom_line(aes(y = ste, color = "Exponencial"), linetype = "dashed") +
+  geom_line(aes(y = stw, color = "Weibull"), linetype = "dashed") +
+  geom_line(aes(y = stln, color = "Log-normal"), linetype = "dashed") +
+  geom_line(aes(y = stlog, color = "Log-logístico"), linetype = "dashed") +
+  geom_line(aes(y = stgom, color = "Gompertz"), linetype = "dashed") +
+  labs(title = "Funções de Sobrevivência",
+       x = "Tempo em dias",
+       y = "Probabilidade de Sobrevida",
+       color = "Modelos") +
+  ylim(0.85, 1) +
+  theme_minimal()
+
+
+ggplotly(g6)
+
+
+
+
+
+# Criar o gráfico com todas as linhas em ggplot2
+p <- ggplot(data, aes(x = time)) +
+  geom_step(aes(y = st), color = "black", size = 1, linetype = "solid") +  # Kaplan-Meier
+  geom_line(aes(y = ste, color = "Exponencial"), linetype = "dashed") +
+  geom_line(aes(y = stw, color = "Weibull"), linetype = "dashed") +
+  geom_line(aes(y = stln, color = "Log-normal"), linetype = "dashed") +
+  geom_line(aes(y = stlog, color = "Log-logístico"), linetype = "dashed") +
+  geom_line(aes(y = stgom, color = "Gompertz"), linetype = "dashed") +
+  labs(title = "Funções de Sobrevivência",
+       x = "Tempo",
+       y = "S(t)",
+       color = "Modelos") +
+  ylim(0.85, 1) +
+  scale_color_manual(values = c(
+    "Exponencial" = "#1f77b4",   # Azul
+    "Weibull" = "#ff7f0e",       # Laranja
+    "Log-normal" = "#2ca02c",    # Verde
+    "Log-logístico" = "#d62728", # Vermelho
+    "Gompertz" = "#9467bd"       # Roxo
+  )) +
+  theme_minimal()
+
+# Converter para plotly
+ggplotly(p)
+
+

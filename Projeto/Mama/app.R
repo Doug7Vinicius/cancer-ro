@@ -102,12 +102,12 @@ df <- can_fm %>%
     Data_Diagnostico = `Data de Diagnostico`
   )
 
-#df$Etnia <- ifelse(df$Etnia == "PARDA", "PARDA", 
-#                  ifelse(df$Etnia == "BRANCO", "BRANCO", "OUTROS"))
-#df$Estado_Civil <- ifelse(df$Estado_Civil == "CASADO", "CASADO", "OUTROS")
-#df$Escolaridade <- ifelse(df$Escolaridade == "FUNDAMENTAL I (1ª A 4ª SÉRIE)", "FUNDAMENTAL I (1ª A 4ª SÉRIE)", 
-#                          ifelse(df$Escolaridade == "FUNDAMENTAL II (5ª A 8ª SÉRIE)", "FUNDAMENTAL II (5ª A 8ª SÉRIE)",
-#                                 ifelse(df$Escolaridade == 'MÉDIO (ANTIGO SEGUNDO GRAU)', "MÉDIO (ANTIGO SEGUNDO GRAU)", "OUTROS")))
+df$Etnia <- ifelse(df$Etnia == "PARDA", "PARDA", 
+                  ifelse(df$Etnia == "BRANCO", "BRANCO", "OUTROS"))
+df$Estado_Civil <- ifelse(df$Estado_Civil == "CASADO", "CASADO", "OUTROS")
+df$Escolaridade <- ifelse(df$Escolaridade == "FUNDAMENTAL I (1ª A 4ª SÉRIE)", "FUNDAMENTAL I (1ª A 4ª SÉRIE)", 
+                        ifelse(df$Escolaridade == "FUNDAMENTAL II (5ª A 8ª SÉRIE)", "FUNDAMENTAL II (5ª A 8ª SÉRIE)",
+                                 ifelse(df$Escolaridade == 'MÉDIO (ANTIGO SEGUNDO GRAU)', "MÉDIO (ANTIGO SEGUNDO GRAU)", "OUTROS")))
 
 
 
@@ -120,7 +120,7 @@ shapefile_path <- "C:\\Users\\44735\\Downloads\\RO_Municipios_2022\\RO_Municipio
 rondonia_map <- st_read(shapefile_path)
 
 #
-base1$Cidade <- str_to_title(base1$Cidade)
+base1$`Cidade Endereço`<- str_to_title(base1$`Cidade Endereço`)
 
 ajustar_nomes <- function(nome) {
   nome <- gsub("Do Oeste", "D'Oeste", nome, ignore.case = TRUE)
@@ -129,11 +129,11 @@ ajustar_nomes <- function(nome) {
   return(nome)
 }
 
-base1$Cidade <- ajustar_nomes(base1$Cidade)
+base1$Cidade <- ajustar_nomes(base1$`Cidade Endereço`)
 
 # Dados fictícios de incidência de câncer por município
 cancer_data <- data.frame(
-  Municipio = base1$Cidade,
+  Municipio = base1$`Cidade Endereço`,
   Incidencia = base1$n
 )
 
@@ -158,22 +158,24 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       menuItem("Geral", tabName = 'geral', icon = icon("dashboard")),
-      menuItem("Análise Exploratória", tabName = "AED", icon = icon("dashboard"),
+      menuItem("Cenário", tabName = "cenario", icon = icon("dashboard"),
                menuSubItem("Mapa", tabName = "map"),
                menuSubItem("Demográficas", tabName = "demograficas"),
-               menuSubItem("Morfológicas", tabName = "morfologicas"),
-               menuSubItem("Tempo", tabName = "tempo"),
-               menuSubItem("Observação", tabName = "janela-obs"),
+               menuSubItem("Morfológicas", tabName = "morfologica"),
                menuSubItem("Tabela", tabName = "tabela")
       ),
+      menuItem("Análise Exploratória", tabName = 'AED', icon = icon("dashboard"),
+               menuSubItem("Tempo", tabName = "tempo"),
+               menuSubItem("Observação", tabName = "janela-obs")),
       menuItem("Modelo Kaplan-Meier", tabName = "km", icon = icon("line-chart"),
                menuSubItem("Curva de Sobrevida", tabName = "km-geral"),
                menuSubItem("Taxa de Falha", tabName = "taxa-falha"),
                menuSubItem("Taxa de Falha Acumulada", tabName = "taxa-acumulada")),
-      menuItem("Modelos Paramétricos", tabName = "parametric", icon = icon("bar-chart"),
-               menuSubItem("Paramétricos", tabName = "exponencial"),
-               menuSubItem("Avaliação dos Modelos", tabName = "demograficas"),
-               menuSubItem("Diagnóstico dos Modelos", tabName = "demograficas"))
+      menuItem("Modelos Paramétricos", tabName = "parametricos", icon = icon("bar-chart"),
+               menuSubItem("Paramétricos", tabName = "Dist"),
+               menuSubItem("Avaliação dos Modelos", tabName = "Aval"),
+               menuSubItem("Diagnóstico dos Modelos", tabName = "Diag")),
+      menuItem("Modelo de Cox", tabName = "cox", icon = icon("bar-chart"))
     )
   ),
   dashboardBody(
@@ -184,14 +186,14 @@ ui <- dashboardPage(
     
     #
     tabItems(
-      tabItem(tabName = "morfologicas",
+      tabItem(tabName = "morfologica",
               fluidRow(
                 box(title = "Freq",
                     status = "primary",
                     solidHeader = TRUE,
-                    height = 800,
+                    height = 700,
                     width = 12,
-                    plotOutput("morfologicas", height = "900px"))
+                    plotOutput("morfologica", height = "700px"))
               ))
     ),
     
@@ -261,23 +263,22 @@ ui <- dashboardPage(
                   width = 7,
                   tabPanel("Geral", plotOutput('tx_geral', height = "400px")),
                   tabPanel("Estado Civil", plotOutput('tx_estado_civil')),
-                  tabPanel("Escolaridade", plotOutput('tx_escolaridade')),
+                  tabPanel("Escolaridade", plotOutput('tx_escolaridade', height = "800px")),
                   tabPanel("Etnia", plotOutput('tx_etnia'))
                 )
               )
       ),
       
      # Modelos Paramétricos
-      tabItem(tabName = "exponencial",
+      tabItem(tabName = "Dist",
               fluidRow(
-                tabBox(
+                box(
                   title = "Modelos Paramétricos",
-                  id = "tabset1", height = "250px",
-                  tabPanel("Exponencial", "First tab content"),
-                  tabPanel("Weibull", "Tab content 2"),
-                  tabPanel("Log-normal", "Tab content 2"),
-                  tabPanel("Log-logístico", "Tab content 2")
-                )
+                  status = "primary",
+                  width = 8,
+                  height = 800,
+                  solidHeader = TRUE,
+                  tabPanel("Dist", plotlyOutput("parametric", height = "740px")))
       )
     )
   )
@@ -331,7 +332,7 @@ server <- function(input, output) {
   
   })
   
-  output$morfologicas <- renderPlot({
+  output$morfologica <- renderPlot({
     # Substitua pelo seu dataset morfológico
     m1 <- plot_bar(df %>%
                select(Estado_Civil, Escolaridade, Etnia, Status),
@@ -382,10 +383,11 @@ server <- function(input, output) {
 
 ## Menu Modelo Kaplan-Meier
   #
+  fit1 <- survfit(Surv(Tempo, Status) ~ 1, data = df)
   output$km_geral <- renderPlot({
-    fit <- survfit(Surv(Tempo, Status) ~ 1, data = df)
+    
     g1 <- ggsurvplot(
-      fit, data = df,
+      fit1, data = df,
       pval = TRUE, 
       conf.int = TRUE,
       xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
@@ -402,18 +404,24 @@ server <- function(input, output) {
     print(g1)
   })
   
+  # Função de Risco.
   output$tx_geral <- renderPlot({
     #
-    hazard_geral <- -log(fit$surv) / fit$time
+    hazard_geral <- -log(fit1$surv) / fit1$time
     #
-    h1 <- plot(fit$time, hazard_geral, type = "l", xlab = "Tempo", ylab = "Taxa de Falha")
+    h1 <- plot(fit1$time, hazard_geral, type = "l", xlab = "Tempo", ylab = "Taxa de Falha")
+  
+  # Função de Risco Acumulado.
+    
+    
   })
 
   # 
+  fit2 <- survfit(Surv(Tempo, Status) ~ Estado_Civil, data = df)
   output$km_estado_civil <- renderPlot({
-    fit <- survfit(Surv(Tempo, Status) ~ Estado_Civil, data = df)
+    
     g2 <- ggsurvplot(
-      fit, data = df,
+      fit2, data = df,
       pval = TRUE, 
       conf.int = FALSE,
       xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
@@ -428,6 +436,15 @@ server <- function(input, output) {
     )
     g2$plot <- g2$plot + theme(legend.title = element_blank())
     print(g2)
+  
+  })  
+    # Função de Risco.
+    output$tx_estado_civil <- renderPlot({
+      #
+      hazard_estado_civil <- -log(fit2$surv) / fit2$time
+      #
+      h2 <- plot(fit2$time, hazard_estado_civil, type = "l", xlab = "Tempo", ylab = "Taxa de Falha")
+    
   })
   
   # 
@@ -440,7 +457,7 @@ server <- function(input, output) {
       xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
       break.time.by = 100,
       ggtheme = theme_light(),
-      ylim = c(0.85,1),
+      ylim = c(0.75,1),
       xlim = c(0,1400)
       # risk.table = "abs_pct",
       # risk.table.y.text.col = TRUE,
@@ -461,7 +478,7 @@ server <- function(input, output) {
       xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
       break.time.by = 100,
       ggtheme = theme_light(),
-      ylim = c(0.85,1),
+      ylim = c(0.8,1),
       xlim = c(0,1400)
       # risk.table = "abs_pct",
       # risk.table.y.text.col = TRUE,
@@ -501,8 +518,101 @@ server <- function(input, output) {
   })
   
 ## Menu Modelos Paramétricos
+  #
+  fit_overall = survfit(Surv(Tempo, Status) ~ 1, data = df)
   
-
+  # Distribuição Exponencial
+  ajust1 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'exponential', data = df)
+  ajust1
+  
+  alpha <- exp(ajust1$coefficients[1])
+  alpha
+  
+  ajust2 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'weibull', data = df)
+  ajust2
+  
+  alpha <- exp(ajust2$coefficients[1])
+  alpha
+  gama <- 1/ajust2$scale
+  gama
+  cbind(gama, alpha)
+  
+  # Distribuição Log-normal
+  ajust3 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'lognorm', data = df)
+  ajust3
+  
+  # Distribuição Log-logístico
+  ajust4 <- survreg(Surv(Tempo, Status) ~ 1, dist = 'loglogistic', data = df)
+  ajust4
+  
+  intercept4 <- ajust4$coefficients[1]
+  scale4 <- ajust4$scale
+  
+  # Distribuição Gompertz
+  ajust5 <- flexsurvreg(Surv(Tempo, Status) ~ 1, dist = 'gompertz', data = df)
+  
+  intercept5 <- ajust5$coefficients[1]  # Localização (Intercepto)
+  scale5 <- ajust5$scale  # Parâmetro de forma
+  
+  lambda5 <- exp(ajust5$coefficients[1])  # Converte o intercepto para o parâmetro de taxa
+  theta5 <- exp(ajust5$coefficients[2])  # O inverso da escala é o parâmetro de forma
+  
+  #
+  time <- fit_overall$time
+  st <- fit_overall$surv
+  ste <- exp(-time/9051.529)
+  stw <- exp(-(time/19118.27)^0.7583723)
+  stln <- pnorm((-log(time) + 10.61644)/2.893923)
+  stlog <- 1 / (1 + (exp(-intercept4) * time)^(1/scale4))
+  stgom <- exp(-lambda5 / theta5 * (exp(theta5 * time) - 1))
+  
+  # Calcular as funções de sobrevivência
+  time <- fit_overall$time
+  st <- fit_overall$surv
+  ste <- exp(-time / 9051.529)
+  stw <- exp(-(time / 19118.27) ^ 0.7583723)
+  stln <- pnorm((-log(time) + 10.61644) / 2.893923)
+  stlog <- 1 / (1 + (exp(-intercept4) * time)^(1 / scale4))
+  stgom <- exp(-lambda5 / theta5 * (exp(theta5 * time) - 1))
+  
+  # Criar um dataframe
+  data <- data.frame(
+    time = time,
+    st = st,
+    ste = ste,
+    stw = stw,
+    stln = stln,
+    stlog = stlog,
+    stgom = stgom
+  )
+  
+  output$parametric <- renderPlotly({
+    # Criar o gráfico com todas as linhas em ggplot2
+    p1 <- ggplot(data, aes(x = time)) +
+      geom_step(aes(y = st), color = "black", size = 0.25, linetype = "solid") +  # Kaplan-Meier
+      geom_line(aes(y = ste, color = "Exponencial"), linetype = "dashed") +
+      geom_line(aes(y = stw, color = "Weibull"), linetype = "dashed") +
+      geom_line(aes(y = stln, color = "Log-normal"), linetype = "dashed") +
+      geom_line(aes(y = stlog, color = "Log-logístico"), linetype = "dashed") +
+      geom_line(aes(y = stgom, color = "Gompertz"), linetype = "dashed") +
+      labs(title = "",
+           x = "Tempo em dias",
+           y = "Probabilidade de Sobrevivência",
+           color = "Modelos") +
+      ylim(0.85, 1) +
+      scale_color_manual(values = c(
+        "Exponencial" = "#1f77b4",   # Azul
+        "Weibull" = "#ff7f0e",       # Laranja
+        "Log-normal" = "#2ca02c",    # Verde
+        "Log-logístico" = "#d62728", # Vermelho
+        "Gompertz" = "#9467bd"       # Roxo
+      )) +
+      theme_minimal()
+    
+    # Converter para plotly
+    ggplotly(p1)
+  })
+  
 }
 
 #
