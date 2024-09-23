@@ -137,10 +137,10 @@ ggsurvplot(fit_overall,
            surv.median.line = "hv")
 
 # 
-km_sex = survfit(Surv(Tempo, Status) ~ , data = df)
+km_sex = survfit(Surv(Tempo, Status) ~ Sexo, data = data)
 print(km_sex)
 
-ggsurvplot(survfit(Surv(Tempo, Status) ~ Sexo, data = ), # modelo de sobrevivencia.
+ggsurvplot(survfit(Surv(Tempo, Status) ~ Sexo, data = data), # modelo de sobrevivencia.
            xlab = "Dias", 
            ylab = "Probabilidade de Sobrevida",
            pval = TRUE, 
@@ -150,7 +150,7 @@ ggsurvplot(survfit(Surv(Tempo, Status) ~ Sexo, data = ), # modelo de sobrevivenc
            surv.median.line = "hv")
 
 ggsurvplot(
-  survfit(Surv(Tempo, Status) ~ Sexo, data = baselimpa),                    
+  survfit(Surv(Tempo, Status) ~ Sexo, data = data),                    
   pval = TRUE,              
   conf.int = TRUE,          
   xlab = "Tempo em dias",

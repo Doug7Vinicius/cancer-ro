@@ -557,14 +557,7 @@ server <- function(input, output) {
   lambda5 <- exp(ajust5$coefficients[1])  # Converte o intercepto para o parâmetro de taxa
   theta5 <- exp(ajust5$coefficients[2])  # O inverso da escala é o parâmetro de forma
   
-  #
-  time <- fit_overall$time
-  st <- fit_overall$surv
-  ste <- exp(-time/9051.529)
-  stw <- exp(-(time/19118.27)^0.7583723)
-  stln <- pnorm((-log(time) + 10.61644)/2.893923)
-  stlog <- 1 / (1 + (exp(-intercept4) * time)^(1/scale4))
-  stgom <- exp(-lambda5 / theta5 * (exp(theta5 * time) - 1))
+
   
   # Calcular as funções de sobrevivência
   time <- fit_overall$time
@@ -573,7 +566,7 @@ server <- function(input, output) {
   stw <- exp(-(time / 19118.27) ^ 0.7583723)
   stln <- pnorm((-log(time) + 10.61644) / 2.893923)
   stlog <- 1 / (1 + (exp(-intercept4) * time)^(1 / scale4))
-  stgom <- exp(-lambda5 / theta5 * (exp(theta5 * time) - 1))
+  stgom <- exp((-1/alpha) * beta * (exp(alpha*time)-1))
   
   # Criar um dataframe
   data <- data.frame(

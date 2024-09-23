@@ -497,3 +497,570 @@ p <- ggplot(data, aes(x = time)) +
 ggplotly(p)
 
 
+
+
+
+
+
+modelo <- survreg(Surv(Tempo, Status) ~ 1, data = df, dist = "lognormal")
+summary(modelo)
+
+residuos_martingale <- residuals(modelo, type = "ldcase")
+
+residuos_deviance <- residuals(modelo, type = "deviance")
+
+dfbetas <- residuals(modelo, type = "dfbetas")
+
+
+# Valores ajustados
+valores_ajustados <- predict(modelo)
+
+# Gráfico de resíduos de Martingale
+ggplot(data = data.frame(valores_ajustados, residuos_martingale), aes(x = valores_ajustados, y = residuos_martingale)) +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Resíduos de Martingale", x = "Valores Ajustados", y = "Resíduos de Martingale")
+
+# Gráfico de resíduos de Deviance
+ggplot(data = data.frame(valores_ajustados, residuos_deviance), aes(x = valores_ajustados, y = residuos_deviance)) +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Resíduos de Deviance", x = "Valores Ajustados", y = "Resíduos de Deviance")
+
+
+
+
+
+# Calcular média e desvio padrão dos resíduos
+media_residuos <- mean(residuos_martingale)
+sd_residuos <- sd(residuos_martingale)
+
+# Definir limites
+limite_superior <- media_residuos + 2 * sd_residuos
+limite_inferior <- media_residuos - 2 * sd_residuos
+
+# Destacar pontos
+pontos_distantes <- abs(residuos_martingale) > 2 * sd_residuos
+
+# Replotar com destaque
+plot(residuos_martingale, main = "Resíduos de Martingale", ylab = "Resíduos", xlab = "Índice", pch = ifelse(pontos_distantes, 19, 1), col = ifelse(pontos_distantes, "red", "black"))
+abline(h = 0, col = "red", lty = 2)
+legend("topright", legend = c("Pontos Normais", "Pontos Distantes"), col = c("black", "red"), pch = c(1, 19))
+text(x = 1:length(residuos_martingale)[pontos_distantes], 
+     y = residuos_martingale[pontos_distantes], 
+     labels = df$Cod_Paciente[pontos_distantes], 
+     pos = 4, 
+     cex = 0.7, 
+     col = "red")
+
+
+
+
+
+
+# Calcule os resíduos de Martingale
+residuos_martingale <- residuals(modelo, type = "ldcase")
+
+# Calcular média e desvio padrão dos resíduos
+media_residuos <- mean(residuos_martingale)
+sd_residuos <- sd(residuos_martingale)
+
+# Definir limites
+limite_superior <- media_residuos + 2 * sd_residuos
+limite_inferior <- media_residuos - 2 * sd_residuos
+
+# Destacar pontos
+pontos_distantes <- abs(residuos_martingale) > 2 * sd_residuos
+
+
+# Plotar resíduos
+plot(residuos_martingale, main = "Resíduos de Martingale", ylab = "Resíduos", xlab = "Índice", pch = 1, col = "black")
+
+# Adicionar linha em y = 0
+abline(h = 0, col = "red", lty = 2)
+
+# Adicionar identificadores dos indivíduos apenas nos pontos distantes
+text(x = which(pontos_distantes), 
+     y = residuos_martingale[pontos_distantes], 
+     labels = df$Cod_Paciente[pontos_distantes], 
+     pos = 4, 
+     cex = 0.7, 
+     col = "red")
+
+
+# Calcule os resíduos de Deviance
+residuos_deviance <- residuals(modelo, type = "deviance")
+
+# Calcular média e desvio padrão dos resíduos de deviance
+media_residuos <- mean(residuos_deviance)
+sd_residuos <- sd(residuos_deviance)
+
+# Definir limites
+limite_superior <- media_residuos + 2 * sd_residuos
+limite_inferior <- media_residuos - 2 * sd_residuos
+
+# Destacar pontos
+pontos_distantes <- abs(residuos_deviance) > 2 * sd_residuos
+
+# Plotar resíduos de Deviance
+plot(residuos_deviance, main = "Resíduos de Deviance", ylab = "Resíduos de Deviance", xlab = "Índice", pch = 1, col = "black")
+
+# Adicionar linha em y = 0
+abline(h = 0, col = "red", lty = 2)
+
+# Adicionar identificadores dos indivíduos apenas nos pontos distantes
+text(x = which(pontos_distantes), 
+     y = residuos_deviance[pontos_distantes], 
+     labels = df$Cod_Paciente[pontos_distantes], 
+     pos = 4, 
+     cex = 0.7, 
+     col = "red")
+
+
+# Calcular DFBETAS
+dfbetas <- residuals(modelo, type = "dfbeta")
+
+# Calcular média e desvio padrão dos DFBETAS
+media_dfbetas <- mean(dfbetas)
+sd_dfbetas <- sd(dfbetas)
+
+# Definir limites
+limite_superior <- media_dfbetas + 2 * sd_dfbetas
+limite_inferior <- media_dfbetas - 2 * sd_dfbetas
+
+# Destacar pontos
+pontos_distantes <- abs(dfbetas) > 2 * sd_dfbetas
+
+# Plotar DFBETAS
+plot(dfbetas, main = "DFBETAS", ylab = "DFBETAS", xlab = "Índice", pch = 1, col = "black")
+
+# Adicionar linha em y = 0
+abline(h = 0, col = "red", lty = 2)
+
+# Adicionar identificadores dos indivíduos apenas nos pontos distantes
+text(x = which(pontos_distantes), 
+     y = dfbetas[pontos_distantes], 
+     labels = df$Cod_Paciente[pontos_distantes], 
+     pos = 4, 
+     cex = 0.7, 
+     col = "red")
+
+
+
+
+
+
+cox.num <- coxph(Surv(Tempo, Status) ~ Idade + Escolaridade + Estado_Civil, data = df)
+summary(cox.num)
+
+plot(
+  x = predict(cox.num), 
+  y = residuals(cox.num, type = "deviance"),
+  xlab = "fitted values", 
+  ylab = "Martingale residuals",
+  main = "Residual plot (Martingale)", 
+  las = 1 # this rotates values on y-axis
+)
+
+## add a line at y = residual = 0
+abline(h=0)
+
+## fit a smoother through the points
+lines(
+  smooth.spline( 
+    x = predict(cox.num),
+    y = residuals(cox.num, type = "martingale")),
+  col = "red"
+)
+
+
+
+
+df$SurvObj <- with(df, Surv(Tempo, Status))
+
+
+## Kaplan-Meier estimator without grouping
+km.null <- survfit(data = df, SurvObj ~ 1)
+survplot(km.null, conf = "none")
+
+## Overplot estimation from Cox regression by Efron method
+cox.null <- coxph(data = df, SurvObj ~ 1)
+lines(survfit(cox.null), col = "green", mark.time = FALSE)
+
+## Parametric estimation with Weibull distribution
+weibull.null <- survreg(data = df, SurvObj ~ 1, dist = "weibull")
+lines(x = predict(weibull.null, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
+      y = rev(seq(0.01, 0.99, by = 0.01)),
+      col = "red")
+
+## Parametric estimation with log-logistic distribution
+loglogistic.null <- survreg(data = df, SurvObj ~ 1, dist = "loglogistic")
+lines(x = predict(loglogistic.null, type = "quantile", p = seq(0.01, 0.99, by=.01))[1,],
+      y = rev(seq(0.01, 0.99, by = 0.01)),
+      col = "blue")
+
+## Add legends
+legend(x = "topright",
+       legend = c("Kaplan-Meier", "Cox (Efron)", "Weibull", "Log-logistic"),
+       lwd = 2, bty = "n",
+       col = c("black", "green", "red", "blue"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+mama_prostata <- base %>% filter(str_detect(`Código da Topografia`, "C50|C61"))
+
+# Resumo mais detalhado da estrutura dos dados.
+glimpse(mama_prostata)
+
+# Verificar duplicidades.
+mama_prostata %>% 
+  group_by(`Código do Paciente`) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+# Retirar pacientes que apresentaram duplicidades no conjunto de dados.
+base <- base %>% 
+  filter(!`Código do Paciente` %in% c(1125273,1319524,1322075))
+
+#
+
+# Converter colunas as.Date.
+
+#
+colSums(is.na(can_fm))
+
+#
+mama_prostata <- mama_prostata %>% 
+  mutate(across(c(`Data de Nascimento`,`Data do Óbito`,`Data de Último Contato`,`Data de Diagnostico`), ~ as.Date(., format = "%d/%m/%Y")))
+
+#
+mama_prostata <- mama_prostata %>% 
+  mutate(Data_iguais = ifelse(is.na(`Data do Óbito`) | is.na(`Data de Diagnostico`),
+                              NA,
+                              `Data do Óbito` == `Data de Diagnostico`))
+
+# Criar a variável Status
+mama_prostata <- mama_prostata %>% 
+  mutate(Status = ifelse(!is.na(`Data do Óbito`), 1, 0))
+
+# Antes de criar a variável tempo, verificar o tempo máximo.
+max(mama_prostata$`Data do Óbito`, na.rm = T)
+
+# Substituir NA pela maior data do óbito.
+mama_prostata$`Data do Óbito` <- replace(mama_prostata$`Data do Óbito`, is.na(mama_prostata$`Data do Óbito`), as.Date("2020-07-08"))
+
+# Contagem do tempo.
+mama_prostata <- mama_prostata %>% 
+  mutate(Tempo = as.numeric(difftime(`Data do Óbito`, `Data de Diagnostico`, units = "days")))
+
+
+
+
+data <- mama_prostata %>% 
+  filter(!(Tempo == '0')) %>% 
+  select(`Código do Paciente`, Sexo, `Data de Nascimento`,Idade,`Raca/Cor`,`Grau de Instrução`,`Estado Civil`,
+         `Cidade Endereço`,`Código da Topografia`,`Data do Óbito`,`Data de Diagnostico`,Tempo,Status) %>% 
+  rename(
+    Cod_Paciente = `Código do Paciente`,
+    Data_Nasc = `Data de Nascimento`,
+    Etnia = `Raca/Cor`,
+    Escolaridade = `Grau de Instrução`,
+    Estado_Civil = `Estado Civil`,
+    Cidade = `Cidade Endereço`,
+    Cod_Topografia = `Código da Topografia`,
+    Data_Obito = `Data do Óbito`,
+    Data_Diagnostico = `Data de Diagnostico`
+  )
+
+df1$Etnia <- ifelse(df1$Etnia == "PARDA", "PARDA", 
+                   ifelse(df1$Etnia == "BRANCO", "BRANCO", "OUTROS"))
+df1$Estado_Civil <- ifelse(df1$Estado_Civil == "CASADO", "CASADO", "OUTROS")
+df1$Escolaridade <- ifelse(df1$Escolaridade == "FUNDAMENTAL I (1ª A 4ª SÉRIE)", "FUNDAMENTAL I (1ª A 4ª SÉRIE)", 
+                          ifelse(df1$Escolaridade == "FUNDAMENTAL II (5ª A 8ª SÉRIE)", "FUNDAMENTAL II (5ª A 8ª SÉRIE)",
+                                 ifelse(df1$Escolaridade == 'MÉDIO (ANTIGO SEGUNDO GRAU)', "MÉDIO (ANTIGO SEGUNDO GRAU)", "OUTROS")))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Função para calcular o número de divisores d(n)
+numero_divisores <- function(n) {
+  divisores <- sum(n %% (1:n) == 0)
+  return(divisores)
+}
+
+# Função para calcular a soma dos divisores σ(n)
+soma_divisores <- function(n) {
+  divisores <- sum((1:n)[n %% (1:n) == 0])
+  return(divisores)
+}
+
+# Função Totiente de Euler φ(n)
+totiente_euler <- function(n) {
+  count <- 0
+  for (i in 1:n) {
+    if (gcd(i, n) == 1) count <- count + 1
+  }
+  return(count)
+}
+
+# Testando as funções
+n <- 12
+cat("Número de divisores de", n, ":", numero_divisores(n), "\n")
+cat("Soma dos divisores de", n, ":", soma_divisores(n), "\n")
+cat("Função Totiente de Euler φ(", n, "):", totiente_euler(n), "\n")
+
+
+# Função para gerar números primos até n
+is_primo <- function(n) {
+  if (n <= 1) return(FALSE)
+  for (i in 2:sqrt(n)) {
+    if (n %% i == 0) return(FALSE)
+  }
+  return(TRUE)
+}
+
+# Gerar números primos até um limite
+gerar_primos <- function(limite) {
+  return(which(sapply(1:limite, is_primo)))
+}
+
+# Análise da distribuição de números primos
+limite <- 100
+primos <- gerar_primos(limite)
+cat("Números primos até", limite, ":", primos, "\n")
+
+# Probabilidade de escolher um número primo entre 1 e n
+probabilidade_primos <- function(n) {
+  primos <- gerar_primos(n)
+  return(length(primos) / n)
+}
+
+cat("Probabilidade de escolher um primo até", limite, ":", probabilidade_primos(limite), "\n")
+
+
+
+
+
+
+
+
+
+
+
+
+
