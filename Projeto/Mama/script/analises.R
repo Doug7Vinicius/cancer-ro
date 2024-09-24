@@ -271,6 +271,14 @@ fit_loglogistic <- flexsurvreg(Surv(Tempo, Status) ~ 1, data = df, dist = "llogi
 # Ajustando o modelo Gompertz
 fit_gompertz <- flexsurvreg(Surv(Tempo, Status) ~ 1, data = df, dist = "gompertz")
 
+
+par(mfrow = c(1,5))
+plot(fit_exp, ylim = c(0.85,1))
+plot(fit_weibull, ylim = c(0.85,1))
+plot(fit_lognormal, ylim = c(0.85,1))
+plot(fit_loglogistic, ylim = c(0.85,1))
+plot(fit_gompertz, ylim = c(0.85,1))
+
 # Comparação dos AICs
 aic_values <- c(
   Exponencial = fit_exp$AIC,
@@ -1059,8 +1067,26 @@ cat("Probabilidade de escolher um primo até", limite, ":", probabilidade_primos
 
 
 
+residuals_cox_snell <- residuals(fit_gompertz, type = "response") 
+
+residuals_martingale <- residuals(fit, type = "martingale")
+
+# Gráfico de Resíduos de Cox-Snell
+plot(residuals_cox_snell, main = "Resíduos de Cox-Snell", ylab = "Resíduos", xlab = "Index")
+abline(h = 0, col = "red")
+
+# Gráfico de Resíduos de Martingale
+plot(residuals_martingale, main = "Resíduos de Martingale", ylab = "Resíduos", xlab = "Index")
+abline(h = 0, col = "red")
 
 
 
 
+fit0 <- coxph(formula = Surv(Tempo, Status) ~ 1,
+              data    = df,
+              ties    = c("efron","breslow","exact")[1])
 
+fit1 <- coxph(formula = Surv(Tempo, Status) ~ Idade + Etnia,
+              data    = df,
+              ties    = c("efron","breslow","exact")[1])
+summary(fit1)

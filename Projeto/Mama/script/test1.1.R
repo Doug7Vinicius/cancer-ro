@@ -1,3 +1,4 @@
+# Carregar pacotes necessários
 library(knitr)
 library(kableExtra)
 library(DataExplorer)
@@ -26,27 +27,23 @@ library(plotly)
 library(sf)
 library(leaflet)
 
-
-# Importar os dados.
-#-------------------------------------------------------------------------------
+# Importar os dados
 base <- read_delim("~/PROJETOS/CANCER/Projeto/Mama/dataset/base_nao_identificada_2864.csv", 
                    delim = ";", escape_double = FALSE, locale = locale(encoding = "Latin1"), 
                    trim_ws = TRUE)
 
-# Resumo mais detalhado da estrutura dos dados.
+# Resumo da estrutura dos dados
 glimpse(base)
 
-# Verificar duplicidades.
-base %>% 
+# Verificar duplicidades
+duplicados <- base %>% 
   group_by(`Código do Paciente`) %>% 
   count() %>% 
   arrange(desc(n))
 
-# Retirar pacientes que apresentaram duplicidades no conjunto de dados.
+# Retirar pacientes com duplicidades
 base <- base %>% 
-  filter(!`Código do Paciente` %in% c(1125273,1319524,1322075))
-
-
+  filter(!`Código do Paciente` %in% c(1125273, 1319524, 1322075))
 
 # Carregar dados geográficos (shapefile de Rondônia)
 shapefile_path <- "C:\\Users\\44735\\Downloads\\RO_Municipios_2022\\RO_Municipios_2022.shp"
@@ -60,39 +57,29 @@ ajustar_nomes <- function(nome) {
   return(nome)
 }
 
+# Ajustar nomes e preparar os dados
+can_m <- base %>% filter(str_detect(`Código da Topografia`, "C50"))
+can_p <- base %>% filter(str_detect(`Código da Topografia`, "C61"))
+
 can_m$`Cidade Endereço` <- str_to_title(can_m$`Cidade Endereço`)
 can_p$`Cidade Endereço` <- str_to_title(can_p$`Cidade Endereço`)
 
-# Aplicar ajuste de nomes aos dados
+# Aplicar ajuste de nomes
 can_m$`Cidade Endereço` <- ajustar_nomes(can_m$`Cidade Endereço`)
 can_p$`Cidade Endereço` <- ajustar_nomes(can_p$`Cidade Endereço`)
 
-# Criar dois objetos de dados para os tipos de câncer "Mama" e "Próstata"
-cancer_mama <- can_m %>% 
-  rename(
-    Cidade = `Cidade Endereço`
-  )
+# Contar incidências por cidade
+df_m <- can_m %>% group_by(`Cidade Endereço`) %>% count() %>% rename(Cidade = `Cidade Endereço`, Incidencia = n)
+df_p <- can_p %>% group_by(`Cidade Endereço`) %>% count() %>% rename(Cidade = `Cidade Endereço`,Incidencia = n)
 
-cancer_prostata <- can_p %>% 
-  rename(
-    Cidade = `Cidade Endereço`
-  )
-
-df_m <- cancer_mama %>% group_by(Cidade) %>% count() %>% arrange(desc(n)) %>% rename(Incidencia = n)
-df_p <- cancer_prostata %>% group_by(Cidade) %>% count() %>% arrange(desc(n)) %>% rename(Incidencia = n)
-
-# Juntar os dados geográficos com os dados de incidência de Mama
+# Juntar dados geográficos com incidências de Mama e Próstata
 map_data_mama <- rondonia_map %>%
   left_join(df_m, by = c("NM_MUN" = "Cidade")) %>%
   mutate(Incidencia = ifelse(is.na(Incidencia), 0, Incidencia))
 
-# Juntar os dados geográficos com os dados de incidência de Próstata
 map_data_prostata <- rondonia_map %>%
   left_join(df_p, by = c("NM_MUN" = "Cidade")) %>%
   mutate(Incidencia = ifelse(is.na(Incidencia), 0, Incidencia))
-
-# Interface do usuário (UI)
-# Continuando do seu código anterior...
 
 # Interface do usuário (UI)
 ui <- dashboardPage(
@@ -117,10 +104,9 @@ ui <- dashboardPage(
   dashboardBody(
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
-      tags$script(src = "custom.js") # Inclui o JavaScript
+      tags$script(src = "custom.js")
     ),
     
-    # Layout com a caixa de seleção à direita do gráfico
     fluidRow(
       column(
         width = 7,
@@ -144,20 +130,6 @@ ui <- dashboardPage(
           selectInput("tipo_cancer", "Tipo de Câncer", choices = c("Mama", "Prostata"), selected = "Mama")
         )
       )
-    ),
-    
-    # Adicionando o gráfico de ranking abaixo do caixa de seleção
-    fluidRow(
-      column(
-        width = 10,
-        box(
-          title = "Ranking de Incidência por Cidade",
-          status = "primary",
-          solidHeader = TRUE,
-          width = 8,
-          plotOutput("ranking_plot", height = "700px")
-        )
-      )
     )
   )
 )
@@ -165,103 +137,44 @@ ui <- dashboardPage(
 # Servidor
 server <- function(input, output, session) {
   
-  # Função para escolher o conjunto de dados baseado no tipo de câncer selecionado
   selected_data <- reactive({
     if (input$tipo_cancer == "Mama") {
-      return(map_data_mama)
+      map_data_mama
     } else {
-      return(map_data_prostata)
+      map_data_prostata
     }
   })
   
-  # Carregar e transformar os dados geográficos para WGS84
-  shapefile_path <- "C:\\Users\\44735\\Downloads\\RO_Municipios_2022\\RO_Municipios_2022.shp"
-  rondonia_map <- st_read(shapefile_path) %>%
-    st_transform(crs = 4326)  # Transformar para WGS84
-  
-  # Renderizar o mapa com base no tipo de câncer selecionado
+  # Renderizar o mapa
   output$cancer_map <- renderLeaflet({
-    leaflet(data = selected_data()) %>%
+    df_map <- selected_data()
+    
+    # Criar categorias para incidências
+    df_map$incidencia_cat <- cut(df_map$Incidencia,
+                                 breaks = c(0, 1, 10, 50, 100, Inf),
+                                 labels = c("0-0", "1-10", "11-50", "51-100", "101+"),
+                                 include.lowest = TRUE)
+    
+    # Definindo cores para cada classe com a paleta de Outubro Rosa
+    pal <- colorFactor(palette = c("#F5A6B3", "#D5006D", "#A30037", "#F28EAC", "#C9B3D5", "#6D4C6C"), 
+                       domain = df_map$incidencia_cat)
+    
+    leaflet(data = df_map) %>%
       addTiles() %>%
       addPolygons(
-        fillColor = ~colorNumeric("YlOrRd", Incidencia)(Incidencia),
-        weight = 1,  # Peso da borda
-        opacity = 10,
-        color = "black",  # Cor da borda dos municípios
-        dashArray = "",
-        fillOpacity = 0.7,
-        highlight = highlightOptions(
-          weight = 3,  # Peso da borda ao destacar
-          color = "#666",
-          dashArray = "",
-          fillOpacity = 0.7,
-          bringToFront = TRUE
-        ),
-        label = ~paste(NM_MUN, ":", Incidencia),
-        layerId = ~NM_MUN  # Identificador do município
+        fillColor = ~pal(df_map$incidencia_cat),
+        color = "black",  # Contornos dos municípios
+        weight = 1,
+        opacity = 0.7,
+        fillOpacity = 0.5,
+        label = ~paste(NM_MUN, ": ", Incidencia),
+        highlightOptions = highlightOptions(weight = 3, color = "#666")
       ) %>%
-      addLegend(pal = colorNumeric("YlOrRd", selected_data()$Incidencia),
-                values = selected_data()$Incidencia, opacity = 0.7,
-                title = paste("Incidência de Câncer -", input$tipo_cancer),
-                position = "bottomleft")
-  })
-  
-  # Observar cliques nos municípios e aplicar zoom
-  observeEvent(input$cancer_map_shape_click, {
-    # Capturar o ID do município clicado
-    clicked_municipio <- input$cancer_map_shape_click$id
-    
-    # Filtrar o município clicado para obter suas coordenadas
-    municipio_data <- selected_data() %>% filter(NM_MUN == clicked_municipio)
-    
-    if (nrow(municipio_data) > 0) {
-      # Obter as coordenadas do município
-      coords <- st_coordinates(municipio_data$geometry)
-      lng <- coords[1, 1]  # Longitude
-      lat <- coords[1, 2]  # Latitude
-      
-      # Aplicar zoom ao mapa focando no município clicado
-      leafletProxy("cancer_map") %>% setView(lng = lng, lat = lat, zoom = 10)
-    }
-  })
-  
-  # Observar cliques nos municípios e aplicar zoom
-  observeEvent(input$cancer_map_shape_click, {
-    # Capturar o ID do município clicado
-    clicked_municipio <- input$cancer_map_shape_click$id
-    
-    # Filtrar o município clicado para obter suas coordenadas
-    municipio_data <- selected_data() %>% filter(NM_MUN == clicked_municipio)
-    
-    if (nrow(municipio_data) > 0) {
-      # Obter as coordenadas do município
-      coords <- st_coordinates(municipio_data$geometry)
-      lng <- coords[1, 1]  # Longitude
-      lat <- coords[1, 2]  # Latitude
-      
-      # Aplicar zoom ao mapa focando no município clicado
-      leafletProxy("cancer_map") %>% setView(lng = lng, lat = lat, zoom = 10)
-    }
-  })
-  
-  # Renderizar o gráfico de ranking de incidência
-  output$ranking_plot <- renderPlot({
-    # Obter dados de incidência
-    df_rank <- base %>%
-      group_by(`Cidade Endereço`) %>%
-      count() %>% 
-      arrange(desc(n)) %>% 
-      rename(Incidencia = n) %>% 
-      arrange(desc(Incidencia))
-    
-    # Criar o gráfico
-    df_rank %>% filter(Incidencia != 0) %>% 
-    ggplot(aes(x = fct_reorder(`Cidade Endereço`, Incidencia), y = Incidencia)) +
-      geom_col(fill = "#8C0F1A") +
-      coord_flip() +
-      geom_text(aes(label = round(Incidencia)), hjust = -0.2) +
-      xlab("") + 
-      ylab("Número de Incidência")
+      addLegend(pal = pal,
+                values = df_map$incidencia_cat,
+                title = "Câncer de Mama (2015-2017)",
+                position = "bottomleft",
+                labFormat = labelFormat(prefix = "Incidência: "))
   })
 }
 

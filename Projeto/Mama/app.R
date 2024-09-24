@@ -157,7 +157,8 @@ ui <- dashboardPage(
   ),
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Geral", tabName = 'geral', icon = icon("dashboard")),
+      menuItem("Análise de Sobrevida", tabName = 'geral', icon = icon("dashboard")),
+      menuItem("Dados do INCA-RO", tabName = 'geral', icon = icon("dashboard")),
       menuItem("Cenário", tabName = "cenario", icon = icon("dashboard"),
                menuSubItem("Mapa", tabName = "map"),
                menuSubItem("Demográficas", tabName = "demograficas"),
@@ -174,8 +175,7 @@ ui <- dashboardPage(
       menuItem("Modelos Paramétricos", tabName = "parametricos", icon = icon("bar-chart"),
                menuSubItem("Paramétricos", tabName = "Dist"),
                menuSubItem("Avaliação dos Modelos", tabName = "Aval"),
-               menuSubItem("Diagnóstico dos Modelos", tabName = "Diag")),
-      menuItem("Modelo de Cox", tabName = "cox", icon = icon("bar-chart"))
+               menuSubItem("Diagnóstico dos Modelos", tabName = "Diag"))
     )
   ),
   dashboardBody(
@@ -566,7 +566,7 @@ server <- function(input, output) {
   stw <- exp(-(time / 19118.27) ^ 0.7583723)
   stln <- pnorm((-log(time) + 10.61644) / 2.893923)
   stlog <- 1 / (1 + (exp(-intercept4) * time)^(1 / scale4))
-  stgom <- exp((-1/alpha) * beta * (exp(alpha*time)-1))
+#  stgom <- exp((-1/alpha) * beta * (exp(alpha*time)-1))
   
   # Criar um dataframe
   data <- data.frame(
@@ -575,8 +575,8 @@ server <- function(input, output) {
     ste = ste,
     stw = stw,
     stln = stln,
-    stlog = stlog,
-    stgom = stgom
+    stlog = stlog
+    #stgom = stgom
   )
   
   output$parametric <- renderPlotly({
@@ -587,7 +587,7 @@ server <- function(input, output) {
       geom_line(aes(y = stw, color = "Weibull"), linetype = "dashed") +
       geom_line(aes(y = stln, color = "Log-normal"), linetype = "dashed") +
       geom_line(aes(y = stlog, color = "Log-logístico"), linetype = "dashed") +
-      geom_line(aes(y = stgom, color = "Gompertz"), linetype = "dashed") +
+      #geom_line(aes(y = stgom, color = "Gompertz"), linetype = "dashed") +
       labs(title = "",
            x = "Tempo em dias",
            y = "Probabilidade de Sobrevivência",
