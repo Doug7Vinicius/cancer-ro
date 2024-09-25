@@ -103,24 +103,10 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       menuItem("Home", tabName = 'geral', icon = icon("dashboard")),
-      menuItem("Dados do INCA-RO", tabName = 'geral', icon = icon("dashboard")),
       menuItem("Cenário", tabName = "cenario", icon = icon("dashboard"),
                menuSubItem("Mapa", tabName = "map"),
-               menuSubItem("Demográficas", tabName = "demograficas"),
-               menuSubItem("Morfológicas", tabName = "morfologica"),
-               menuSubItem("Tabela", tabName = "tabela")
-      ),
-      menuItem("Análise Exploratória", tabName = 'AED', icon = icon("dashboard"),
-               menuSubItem("Tempo", tabName = "tempo"),
-               menuSubItem("Observação", tabName = "janela-obs")),
-      menuItem("Modelo Kaplan-Meier", tabName = "km", icon = icon("line-chart"),
-               menuSubItem("Curva de Sobrevida", tabName = "km-geral"),
-               menuSubItem("Taxa de Falha", tabName = "taxa-falha"),
-               menuSubItem("Taxa de Falha Acumulada", tabName = "taxa-acumulada")),
-      menuItem("Modelos Paramétricos", tabName = "parametricos", icon = icon("bar-chart"),
-               menuSubItem("Paramétricos", tabName = "Dist"),
-               menuSubItem("Avaliação dos Modelos", tabName = "Aval"),
-               menuSubItem("Diagnóstico dos Modelos", tabName = "Diag"))
+               menuSubItem("Demográficas", tabName = "demograficas")
+      )
     )
   ),
   

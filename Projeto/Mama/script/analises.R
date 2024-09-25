@@ -1090,3 +1090,95 @@ fit1 <- coxph(formula = Surv(Tempo, Status) ~ Idade + Etnia,
               data    = df,
               ties    = c("efron","breslow","exact")[1])
 summary(fit1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Verificar duplicidades.
+can1 %>% 
+  group_by(`Código do Paciente`) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+# Retirar pacientes que apresentaram duplicidades no conjunto de dados.
+can1 <- can1 %>% 
+  filter(!`Código do Paciente` %in% c(1125273,1319524,1322075))
+
+#
+
+# Converter colunas as.Date.
+
+#
+can1 <- base %>% filter(str_detect(`Código da Topografia`, "C50|C53"))
+
+dim(can1)
+
+colSums(is.na(can1))
+
+#
+can1 <- can1 %>% 
+  mutate(across(c(`Data de Nascimento`,`Data do Óbito`,`Data de Último Contato`,`Data de Diagnostico`), ~ as.Date(., format = "%d/%m/%Y")))
+
+#
+can1 <- can1 %>% 
+  mutate(Data_iguais = ifelse(is.na(`Data do Óbito`) | is.na(`Data de Diagnostico`),
+                              NA,
+                              `Data do Óbito` == `Data de Diagnostico`))
+
+# Criar a variável Status
+can1 <- can1 %>% 
+  mutate(Status = ifelse(!is.na(`Data do Óbito`), 1, 0))
+
+# Antes de criar a variável tempo, verificar o tempo máximo.
+max(can1$`Data do Óbito`, na.rm = T)
+
+# Substituir NA pela maior data do óbito.
+can1$`Data do Óbito` <- replace(can1$`Data do Óbito`, is.na(can1$`Data do Óbito`), as.Date("2020-03-01"))
+
+# Contagem do tempo.
+can1 <- can1 %>% 
+  mutate(Tempo = as.numeric(difftime(`Data do Óbito`, `Data de Diagnostico`, units = "days")))
+
+
+
+
+df <- can1 %>% 
+  filter(!(Tempo == '0' | Sexo == "MASCULINO")) %>% 
+  select(`Código do Paciente`,`Data de Nascimento`,Idade,`Raca/Cor`,`Grau de Instrução`,`Estado Civil`,
+         `Cidade Endereço`,`Código da Topografia`,`Data do Óbito`,`Data de Diagnostico`,Tempo,Status) %>% 
+  rename(
+    Cod_Paciente = `Código do Paciente`,
+    Data_Nasc = `Data de Nascimento`,
+    Etnia = `Raca/Cor`,
+    Escolaridade = `Grau de Instrução`,
+    Estado_Civil = `Estado Civil`,
+    Cidade = `Cidade Endereço`,
+    Cod_Topografia = `Código da Topografia`,
+    Data_Obito = `Data do Óbito`,
+    Data_Diagnostico = `Data de Diagnostico`
+  )
+
+df$Etnia <- ifelse(df$Etnia == "PARDA", "PARDA", 
+                   ifelse(df$Etnia == "BRANCO", "BRANCO", "OUTROS"))
+df$Estado_Civil <- ifelse(df$Estado_Civil == "CASADO", "CASADO", "OUTROS")
+df$Escolaridade <- ifelse(df$Escolaridade == "FUNDAMENTAL I (1ª A 4ª SÉRIE)", "FUNDAMENTAL I (1ª A 4ª SÉRIE)", 
+                          ifelse(df$Escolaridade == "FUNDAMENTAL II (5ª A 8ª SÉRIE)", "FUNDAMENTAL II (5ª A 8ª SÉRIE)",
+                                 ifelse(df$Escolaridade == 'MÉDIO (ANTIGO SEGUNDO GRAU)', "MÉDIO (ANTIGO SEGUNDO GRAU)", "OUTROS")))
+
+df$Cod_Topografia <- ifelse(str_detect(df$Cod_Topografia, "C50"), "Mama", "Colo")
+
+fit <- survfit(Surv(Tempo, Status) ~ Cod_Topografia, data = df)
+
+ggsurvplot(fit, ylim = c(0.7,1))

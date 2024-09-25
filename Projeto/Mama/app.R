@@ -120,7 +120,7 @@ shapefile_path <- "C:\\Users\\44735\\Downloads\\RO_Municipios_2022\\RO_Municipio
 rondonia_map <- st_read(shapefile_path)
 
 #
-base1$`Cidade Endereço`<- str_to_title(base1$`Cidade Endereço`)
+base1$Cidade <- str_to_title(base1$Cidade)
 
 ajustar_nomes <- function(nome) {
   nome <- gsub("Do Oeste", "D'Oeste", nome, ignore.case = TRUE)
@@ -129,11 +129,11 @@ ajustar_nomes <- function(nome) {
   return(nome)
 }
 
-base1$Cidade <- ajustar_nomes(base1$`Cidade Endereço`)
+base1$Cidade <- ajustar_nomes(base1$Cidade)
 
 # Dados fictícios de incidência de câncer por município
 cancer_data <- data.frame(
-  Municipio = base1$`Cidade Endereço`,
+  Municipio = base1$Cidade,
   Incidencia = base1$n
 )
 
@@ -150,10 +150,12 @@ ui <- dashboardPage(
     title = tagList(
       # Adiciona a logo
       tags$img(src = 'mama.png', height = '50px', style = 'float: left; margin-right: 10px;'),
-      "Câncer de Mama"
+      ""
     ),
     # Outras opções do cabeçalho, se necessário
-    titleWidth = 250
+    titleWidth = 250,
+    
+    tags$li(class = "dropdown", style = "background-color: #C55888;")  # Cor rosa
   ),
   dashboardSidebar(
     sidebarMenu(
@@ -181,7 +183,24 @@ ui <- dashboardPage(
   dashboardBody(
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
-      tags$script(src = "custom.js") # Inclui o JavaScript
+      tags$script(src = "custom.js"),  # Inclui o JavaScript
+      # Estilo do corpo para combinar com o Outubro Rosa
+      tags$style(HTML("
+        .skin-blue .main-header {
+          background-color: #C55888;  /* Cor de fundo rosa */
+        }
+        .skin-blue .main-header .logo {
+          background-color: #C55888; /* Logo rosa */
+          color: white; /* Cor do texto */
+        }
+        .skin-blue .main-header .navbar {
+          background-color: #C55888; /* Navbar rosa */
+        }
+        .box-header {
+          background-color: #C55888; /* Cor rosa clara para os boxes */
+          color: white; /* Cor do título */
+        }
+      "))
     ),
     
     #
@@ -566,7 +585,7 @@ server <- function(input, output) {
   stw <- exp(-(time / 19118.27) ^ 0.7583723)
   stln <- pnorm((-log(time) + 10.61644) / 2.893923)
   stlog <- 1 / (1 + (exp(-intercept4) * time)^(1 / scale4))
-#  stgom <- exp((-1/alpha) * beta * (exp(alpha*time)-1))
+  #stgom <- (scale5*exp(intercept5*time)) * (exp((-scale5/intercept5)* (exp(intercept5*time) - 1)))
   
   # Criar um dataframe
   data <- data.frame(
