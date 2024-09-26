@@ -171,3 +171,56 @@ ggplot(haz, aes(x = time, y = est, col = method, linetype = method)) +
                       values = c("black", rainbow(n_dists))) +
   scale_linetype_manual(name = "",
                         values = c(1, rep_len(2:6, n_dists)))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Interactive plot to examine survival time and end
+orca <- mutate(df, text = paste(
+  "Subject ID = ", Cod_Paciente, "<br>", 
+  "Time = ", Tempo, "<br>", 
+  "Event = ", Status, "<br>", 
+  "Age = ", Idade, "<br>"
+))
+
+ggplotly(
+  ggplot(orca, aes(x = Cod_Paciente, y = Tempo, text = text)) +
+    geom_linerange(aes(ymin = 0, ymax = Tempo)) +
+    geom_point(aes(shape = Status, color = Status), stroke = 0.3, cex = 2) +
+    scale_shape_manual(values = c(0,1)) +
+    labs(y = "Time (years)", x = "Subject ID") + 
+    coord_flip() + 
+    theme_classic(),
+  tooltip = "text"
+)

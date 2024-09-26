@@ -61,7 +61,8 @@ colSums(is.na(can_fm))
 
 #
 can_fm <- can_fm %>% 
-  mutate(across(c(`Data de Nascimento`,`Data do Óbito`,`Data de Último Contato`,`Data de Diagnostico`), ~ as.Date(., format = "%d/%m/%Y")))
+  mutate(across(c(`Data de Nascimento`,`Data do Óbito`,
+                  `Data de Último Contato`,`Data de Diagnostico`), ~ as.Date(., format = "%d/%m/%Y")))
 
 #
 can_fm <- can_fm %>% 
@@ -84,8 +85,6 @@ can_fm <- can_fm %>%
   mutate(Tempo = as.numeric(difftime(`Data do Óbito`, `Data de Diagnostico`, units = "days")))
 
 
-
-
 df <- can_fm %>% 
   filter(!(Tempo == '0' | Sexo == "MASCULINO")) %>% 
   select(`Código do Paciente`,`Data de Nascimento`,Idade,`Raca/Cor`,`Grau de Instrução`,`Estado Civil`,
@@ -102,18 +101,93 @@ df <- can_fm %>%
     Data_Diagnostico = `Data de Diagnostico`
   )
 
-df$Etnia <- ifelse(df$Etnia == "PARDA", "PARDA", 
-                  ifelse(df$Etnia == "BRANCO", "BRANCO", "OUTROS"))
-df$Estado_Civil <- ifelse(df$Estado_Civil == "CASADO", "CASADO", "OUTROS")
-df$Escolaridade <- ifelse(df$Escolaridade == "FUNDAMENTAL I (1ª A 4ª SÉRIE)", "FUNDAMENTAL I (1ª A 4ª SÉRIE)", 
-                        ifelse(df$Escolaridade == "FUNDAMENTAL II (5ª A 8ª SÉRIE)", "FUNDAMENTAL II (5ª A 8ª SÉRIE)",
-                                 ifelse(df$Escolaridade == 'MÉDIO (ANTIGO SEGUNDO GRAU)', "MÉDIO (ANTIGO SEGUNDO GRAU)", "OUTROS")))
+
+df <- df %>%
+  filter(!((Estado_Civil == "SEM INFORMAÇÃO") | 
+             (Escolaridade == "SEM INFORMAÇÃO") | 
+             (Etnia == "SEM INFORMAÇÃO") | 
+             (Cidade == "SEM INFORMAÇÃO")))
 
 
 
+df <- df %>%
+  mutate(Etnia = case_when(
+    Etnia == "PARDA" ~ "PARDA",
+    Etnia == "BRANCO" ~ "BRANCO",
+    TRUE ~ "OUTROS"
+  ))
+
+df <- df %>%
+  mutate(Estado_Civil = case_when(
+    Estado_Civil == "CASADO" ~ "CASADO",
+    TRUE ~ "OUTROS"
+  ))
+
+df <- df %>%
+  mutate(Escolaridade = case_when(
+    Escolaridade == "FUNDAMENTAL I (1ª A 4ª SÉRIE)" ~ "FUNDAMENTAL I (1ª A 4ª SÉRIE)",
+    Escolaridade == "FUNDAMENTAL II (5ª A 8ª SÉRIE)" ~ "FUNDAMENTAL II (5ª A 8ª SÉRIE)",
+    Escolaridade == "MÉDIO (ANTIGO SEGUNDO GRAU)" ~ "MÉDIO (ANTIGO SEGUNDO GRAU)",
+    TRUE ~ "OUTROS"
+  ))
 
 
+colSums(is.na(df))
 
+df <- df %>%
+  mutate(faixa_etaria = case_when(
+    Idade < 40 ~ "< 40 anos",
+    Idade >= 40 & Idade <= 49 ~ "40 a 49 anos",
+    Idade >= 50 & Idade <= 59 ~ "50 a 59 anos",
+    Idade >= 60 & Idade <= 69 ~ "60 a 69 anos",
+    Idade >= 70 ~ ">= 70 anos"
+  ))
+
+df <- df %>%
+  mutate(Subject_ID = row_number())
+
+df <- df %>%
+  mutate(Event_Category = ifelse(Status == 1, "Falha", "Censura"))
+
+# Criar um gráfico com janelas de observação
+c1 <- ggplot(df, aes(y = Subject_ID)) +
+  geom_segment(aes(x = df$Data_Diagnostico, xend = df$Data_Obito, y = Subject_ID, yend = Subject_ID, color = Event_Category), size = 1) +
+  scale_color_manual(values = c("Falha" = "lightblue", "Censura" = "lightpink")) +
+  labs(x = "Data", y = "Pacientes - Id",
+       title = "Calendário de Observação por Paciente") +
+  theme_classic() +
+  scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "1 month") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplotly(t1) %>% 
+  layout(dragmode = "zoom") %>% 
+  config(displayModeBar = TRUE, 
+         modeBarButtons = c(
+           "resetScale","zoom","pan"), 
+         displaylogo = FALSE)
+
+
+###############################
+#-------------------------------------------------------------------------------
+can_m <- base %>% filter(str_detect(`Código da Topografia`, "C50"))
+
+can_m$`Cidade Endereço` <- str_to_title(can_m$`Cidade Endereço`)
+
+can_m$`Cidade Endereço` <- str_replace_all(can_m$`Cidade Endereço`, "\\b(Do|Dos|De)\\b", function(m) tolower(m))
+
+can_m$`Cidade Endereço` <- ajustar_nomes(can_m$`Cidade Endereço`)
+
+rondonia_map$NM_MUN <- ajustar_nomes(rondonia_map$NM_MUN)
+
+# Contar incidências por cidade
+df_m <- can_m %>% group_by(`Cidade Endereço`) %>% count() %>% rename(Cidade = `Cidade Endereço`, Incidencia = n)
+
+# Juntar dados geográficos com incidências de Mama e Próstata
+map_data_mama <- rondonia_map %>%
+  left_join(df_m, by = c("NM_MUN" = "Cidade")) %>%
+  mutate(Incidencia = ifelse(is.na(Incidencia), 0, Incidencia))
+
+#-------------------------------------------------------------------------------
 
 # Carregar dados geográficos (shapefile de Rondônia)
 shapefile_path <- "C:\\Users\\44735\\Downloads\\RO_Municipios_2022\\RO_Municipios_2022.shp"
@@ -142,8 +216,10 @@ cancer_data <- data.frame(
 map_data <- rondonia_map %>%
   left_join(cancer_data, by = c("NM_MUN" = "Municipio")) %>%
   mutate(Incidencia = ifelse(is.na(Incidencia), 0, Incidencia))  # Substituir NA por 0
+
+#####
+##### Frontend
 #-------------------------------------------------------------------------------
-#
 ui <- dashboardPage(
   dashboardHeader(
     #
@@ -183,24 +259,23 @@ ui <- dashboardPage(
   dashboardBody(
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
-      tags$script(src = "custom.js"),  # Inclui o JavaScript
-      # Estilo do corpo para combinar com o Outubro Rosa
+      tags$script(src = "custom.js"),
       tags$style(HTML("
-        .skin-blue .main-header {
-          background-color: #C55888;  /* Cor de fundo rosa */
-        }
-        .skin-blue .main-header .logo {
-          background-color: #C55888; /* Logo rosa */
-          color: white; /* Cor do texto */
-        }
-        .skin-blue .main-header .navbar {
-          background-color: #C55888; /* Navbar rosa */
-        }
-        .box-header {
-          background-color: #C55888; /* Cor rosa clara para os boxes */
-          color: white; /* Cor do título */
-        }
-      "))
+      .skin-blue .main-header {
+        background-color: #C55888;  /* Cor de fundo rosa */
+      }
+      .skin-blue .main-header .logo {
+        background-color: #C55888; /* Logo rosa */
+        color: white; /* Cor do texto */
+      }
+      .skin-blue .main-header .navbar {
+        background-color: #C55888; /* Navbar rosa */
+      }
+      .box-header {
+        background-color: #C55888; /* Cor rosa clara para os boxes */
+        color: white; /* Cor do título */
+      }
+    "))
     ),
     
     #
@@ -254,7 +329,7 @@ ui <- dashboardPage(
               dataTableOutput("tabela")
         
       ),
-      ###################################################
+      #
       tabItem(tabName = "km-geral",
               fluidRow(
                 tabBox(
@@ -272,7 +347,7 @@ ui <- dashboardPage(
               )
       ),
       
-      ###################################################
+      ##
       tabItem(tabName = "taxa-falha",
               fluidRow(
                 tabBox(
@@ -304,8 +379,9 @@ ui <- dashboardPage(
 )
 )
 
+##### 
+##### Beckend
 #-------------------------------------------------------------------------------
-#
 server <- function(input, output) {
   
   output$cancer_map <- renderLeaflet({
@@ -412,7 +488,7 @@ server <- function(input, output) {
       xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
       break.time.by = 100,
       ggtheme = theme_light(),
-      ylim = c(0.85,1),
+      ylim = c(0.8,1),
       xlim = c(0,1400)
       # risk.table = "abs_pct",
       # risk.table.y.text.col = TRUE,
@@ -420,7 +496,7 @@ server <- function(input, output) {
       # ncensor.plot = TRUE,
     )
     g1$plot <- g1$plot + theme(legend.title = element_blank())
-    print(g1)
+    ggplotly(g1$plot)
   })
   
   # Função de Risco.
@@ -446,7 +522,7 @@ server <- function(input, output) {
       xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
       break.time.by = 100,
       ggtheme = theme_light(),
-      ylim = c(0.85,1),
+      ylim = c(0.8,1),
       xlim = c(0,1400)
       # risk.table = "abs_pct",
       # risk.table.y.text.col = TRUE,
@@ -511,17 +587,17 @@ server <- function(input, output) {
   # 
   output$km_idade <- renderPlotly({
     # Ajuste do modelo Kaplan-Meier
-    fit <- survfit(Surv(Tempo, Status) ~ Faixa_etária, data = df1)
+    fit <- survfit(Surv(Tempo, Status) ~ faixa_etaria, data = df)
     
     # Criação do gráfico Kaplan-Meier com ggsurvplot
     g5 <- ggsurvplot(
-      fit, data = df1,
+      fit, data = df,
       pval = TRUE, 
       conf.int = FALSE,
       xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
       break.time.by = 100,
       ggtheme = theme_light(),
-      ylim = c(0.85, 1),
+      ylim = c(0.8, 1),
       xlim = c(0, 1400)
       # risk.table = "abs_pct",
       # risk.table.y.text.col = TRUE,
@@ -627,5 +703,12 @@ server <- function(input, output) {
   
 }
 
-#
+
+#####
+##### Executor shinyapp.
+#-------------------------------------------------------------------------------
 shinyApp(ui, server)
+
+
+
+

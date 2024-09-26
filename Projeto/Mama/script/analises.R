@@ -1,5 +1,5 @@
 
-
+# https://www.gov.br/saude/pt-br/assuntos/noticias-para-os-estados/rondonia/2023/fevereiro/estudo-aponta-para-estimativa-de-mais-de-8-mil-novos-casos-de-cancer-em-rondonia-ate-2025
 
 
 
@@ -285,7 +285,7 @@ aic_values <- c(
   Weibull = fit_weibull$AIC,
   LogNormal = fit_lognormal$AIC,
   LogLogistico = fit_loglogistic$AIC,
-  Gompertz = fit_gompertz$AIC
+  #Gompertz = fit_gompertz$AIC
 )
 
 # Exibir os valores de AIC
@@ -401,8 +401,8 @@ plot_gompertz <- ggplot(data, aes(x = stgom, y = st)) +
   xlim(0.85, 1) + ylim(0.85, 1)
 
 # Juntar os gráficos lado a lado
-combined_plot <- plot_exponential + plot_weibull + plot_lognormal + plot_loglogistic + plot_gompertz +
-  plot_layout(ncol = 5)
+combined_plot <- plot_exponential + plot_weibull + plot_lognormal + plot_loglogistic +
+  plot_layout(ncol = 4)
 
 # Exibir o gráfico combinado
 print(combined_plot)
@@ -464,7 +464,7 @@ g6 <- ggplot(data, aes(x = time)) +
   geom_line(aes(y = stw, color = "Weibull"), linetype = "dashed") +
   geom_line(aes(y = stln, color = "Log-normal"), linetype = "dashed") +
   geom_line(aes(y = stlog, color = "Log-logístico"), linetype = "dashed") +
-  geom_line(aes(y = stgom, color = "Gompertz"), linetype = "dashed") +
+  #geom_line(aes(y = stgom, color = "Gompertz"), linetype = "dashed") +
   labs(title = "Funções de Sobrevivência",
        x = "Tempo em dias",
        y = "Probabilidade de Sobrevida",
