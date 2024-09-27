@@ -93,72 +93,90 @@ map_data_prostata <- rondonia_map %>%
 # Interface do usuário (UI)
 ui <- dashboardPage(
   title = 'Câncer Mama - RO',
-  header = dashboardHeader(
-    title = "Análise de Sobrevida",
-    # puts sidebar toggle on right
-    titleWidth = "calc(100% - 44px)"
-    
-  ),
+  header = dashboardHeader(title = ""),
   
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Home", tabName = 'geral', icon = icon("dashboard")),
-      menuItem("Dados do INCA-RO", tabName = 'geral', icon = icon("dashboard")),
+      menuItem("Home", tabName = 'home', icon = icon("dashboard")),
       menuItem("Cenário", tabName = "cenario", icon = icon("dashboard"),
-               menuSubItem("Mapa", tabName = "map"),
-               menuSubItem("Demográficas", tabName = "demograficas"),
-               menuSubItem("Morfológicas", tabName = "morfologica"),
-               menuSubItem("Tabela", tabName = "tabela")
-      ),
-      menuItem("Análise Exploratória", tabName = 'AED', icon = icon("dashboard"),
-               menuSubItem("Tempo", tabName = "tempo"),
-               menuSubItem("Observação", tabName = "janela-obs")),
-      menuItem("Modelo Kaplan-Meier", tabName = "km", icon = icon("line-chart"),
-               menuSubItem("Curva de Sobrevida", tabName = "km-geral"),
-               menuSubItem("Taxa de Falha", tabName = "taxa-falha"),
-               menuSubItem("Taxa de Falha Acumulada", tabName = "taxa-acumulada")),
-      menuItem("Modelos Paramétricos", tabName = "parametricos", icon = icon("bar-chart"),
-               menuSubItem("Paramétricos", tabName = "Dist"),
-               menuSubItem("Avaliação dos Modelos", tabName = "Aval"),
-               menuSubItem("Diagnóstico dos Modelos", tabName = "Diag"))
+               menuSubItem("Mapa", tabName = "map"))
     )
   ),
   
   dashboardBody(
-    shinyjs::useShinyjs(),
-    tags$head(
-      # links to files in www/
-      tags$link(rel = "stylesheet",
-                type = "text/css",
-                href = "custom.css"),
-      tags$script(src = "custom.js")
-    ),
-    tabItems(
-      tabItem(tabName = "demo_tab", 
-              imageOutput("logo"))),
+    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
+    tags$script(src = "custom.js"),
+    tags$style(HTML("
+      .skin-blue .main-header {
+        background-color: #C55888 !important;
+      }
+      .skin-blue .main-header .logo {
+        background-color: #C55888 !important;
+        color: white !important;
+      }
+      .skin-blue .main-header .navbar {
+        background-color: #C55888 !important;
+      }
+      .box-header {
+        background-color: #C55888 !important;
+        color: white !important;
+      }
+      .box {
+        border-color: #C55888 !important;
+      }
+    ")),
     
-    fluidRow(
-      column(
-        width = 7,
-        box(
-          title = "Mapa de Incidência de Câncer no Estado de Rondônia", 
-          status = "primary",
-          solidHeader = TRUE,
-          width = 12,
-          height = 800,
-          leafletOutput("cancer_map", height = "700px")
-        )
+    tabItems(
+      tabItem(tabName = "home",
+              fluidRow(
+                column(width = 12,
+                       box(title = "Apresentação do Projeto: Câncer de Mama em Rondônia",
+                           status = "primary", solidHeader = TRUE,
+                           "Este projeto visa analisar a incidência de câncer de mama no estado de Rondônia, 
+                            utilizando dados coletados entre 2015 e 2017. O objetivo principal é identificar 
+                            padrões geográficos de incidência e fornecer insights que possam auxiliar na 
+                            formulação de políticas públicas de saúde.",
+                           br(), br(),
+                           "Através de uma interface interativa, os usuários podem explorar os dados por meio de mapas 
+                            e gráficos, permitindo uma visualização clara das informações.",
+                           br(), br(),
+                           "Os dados foram obtidos de fontes oficiais e foram tratados para garantir sua qualidade. 
+                            A análise inclui a criação de mapas de incidência por município, além de comparações entre 
+                            diferentes tipos de câncer.",
+                           br(), br(),
+                           "Esperamos que este trabalho contribua para o entendimento e o combate ao câncer de mama 
+                            em Rondônia, facilitando a identificação de áreas prioritárias para intervenções de saúde 
+                            pública."
+                       )
+                )
+              )
       ),
       
-      column(
-        width = 4,
-        box(
-          title = "Tipo de Câncer",
-          status = "primary",
-          solidHeader = TRUE,
-          width = 12,
-          selectInput("tipo_cancer", "Tipo de Câncer", choices = c("Mama", "Prostata"), selected = "Mama")
-        )
+      tabItem(tabName = "map", 
+              fluidRow(
+                column(
+                  width = 7,
+                  box(
+                    title = "Incidência de Câncer de Mama no Estado de Rondônia", 
+                    status = "primary",
+                    solidHeader = TRUE,
+                    width = 12,
+                    height = 800,
+                    leafletOutput("cancer_map", height = "700px")
+                  )
+                ),
+                
+                column(
+                  width = 4,
+                  box(
+                    title = "Tipo de Câncer",
+                    status = "primary",
+                    solidHeader = TRUE,
+                    width = 12,
+                    selectInput("tipo_cancer", "Tipo de Câncer", choices = c("Mama", "Prostata"), selected = "Mama")
+                  )
+                )
+              )
       )
     )
   )
@@ -166,6 +184,26 @@ ui <- dashboardPage(
 
 # Servidor
 server <- function(input, output, session) {
+  
+  # Exemplo de dados resumidos
+  output$data_summary <- DT::renderDataTable({
+    base %>% 
+      select(`Código do Paciente`, `Cidade Endereço`, `Código da Topografia`) %>%
+      head(10)  # Exibir apenas as 10 primeiras linhas
+  })
+  
+  # Exemplo de gráfico de incidência
+  output$incidence_plot <- plotly::renderPlotly({
+    df_plot <- can_m %>% 
+      group_by(`Cidade Endereço`) %>% 
+      summarise(Incidencia = n())
+    
+    plot_ly(data = df_plot, x = ~`Cidade Endereço`, y = ~Incidencia, type = 'bar') %>%
+      layout(title = "Incidência de Câncer de Mama por Cidade",
+             xaxis = list(title = "Cidade"),
+             yaxis = list(title = "Incidência"))
+  })
+  
   
   selected_data <- reactive({
     if (input$tipo_cancer == "Mama") {

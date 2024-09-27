@@ -337,7 +337,7 @@ ui <- dashboardPage(
                   id = "tabset2", 
                   height = "400px",
                   width = 7,
-                  tabPanel("Geral", plotOutput('km_geral', height = "400px")),
+                  tabPanel("Geral", plotlyOutput('km_geral', height = "400px")),
                   tabPanel("Estado Civil", plotOutput('km_estado_civil')),
                   tabPanel("Escolaridade", plotOutput('km_escolaridade')),
                   tabPanel("Etnia", plotOutput('km_etnia')),
@@ -479,7 +479,7 @@ server <- function(input, output) {
 ## Menu Modelo Kaplan-Meier
   #
   fit1 <- survfit(Surv(Tempo, Status) ~ 1, data = df)
-  output$km_geral <- renderPlot({
+  output$km_geral <- renderPlotly({
     
     g1 <- ggsurvplot(
       fit1, data = df,

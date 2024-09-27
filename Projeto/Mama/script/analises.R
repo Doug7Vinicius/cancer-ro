@@ -1151,9 +1151,6 @@ can1$`Data do Óbito` <- replace(can1$`Data do Óbito`, is.na(can1$`Data do Óbi
 can1 <- can1 %>% 
   mutate(Tempo = as.numeric(difftime(`Data do Óbito`, `Data de Diagnostico`, units = "days")))
 
-
-
-
 df <- can1 %>% 
   filter(!(Tempo == '0' | Sexo == "MASCULINO")) %>% 
   select(`Código do Paciente`,`Data de Nascimento`,Idade,`Raca/Cor`,`Grau de Instrução`,`Estado Civil`,
@@ -1172,7 +1169,9 @@ df <- can1 %>%
 
 df$Etnia <- ifelse(df$Etnia == "PARDA", "PARDA", 
                    ifelse(df$Etnia == "BRANCO", "BRANCO", "OUTROS"))
+
 df$Estado_Civil <- ifelse(df$Estado_Civil == "CASADO", "CASADO", "OUTROS")
+
 df$Escolaridade <- ifelse(df$Escolaridade == "FUNDAMENTAL I (1ª A 4ª SÉRIE)", "FUNDAMENTAL I (1ª A 4ª SÉRIE)", 
                           ifelse(df$Escolaridade == "FUNDAMENTAL II (5ª A 8ª SÉRIE)", "FUNDAMENTAL II (5ª A 8ª SÉRIE)",
                                  ifelse(df$Escolaridade == 'MÉDIO (ANTIGO SEGUNDO GRAU)', "MÉDIO (ANTIGO SEGUNDO GRAU)", "OUTROS")))

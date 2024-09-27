@@ -114,11 +114,89 @@ ggplot(haz_lnorm, aes(x = time, y = value, col = meanlog)) +
 
 
 
+library("muhaz")
+kernel_haz_est <- muhaz(df$Tempo, df$Status)
+kernel_haz <- data.table(time = kernel_haz_est$est.grid,
+                         est = kernel_haz_est$haz.est,
+                         method = "Kernel density")
+
+
+dists <- c("exp", "weibull", "lognormal", "llogis")
+dists_long <- c("Exponential", "Weibull","Lognormal", "Log-logistic")
+parametric_haz <- vector(mode = "list", length = length(dists))
+for (i in 1:length(dists)){
+  fit <- flexsurvreg(Surv(Tempo, Status) ~ 1, data = dat, dist = dists[i]) 
+  parametric_haz[[i]] <- summary(fit, type = "hazard", 
+                                 ci = FALSE, tidy = TRUE)
+  parametric_haz[[i]]$method <- dists_long[i]
+}
+parametric_haz <- rbindlist(parametric_haz)
+
+haz <- rbind(kernel_haz, parametric_haz)
+haz[, method := factor(method,
+                       levels = c("Kernel density",
+                                  dists_long))]
+n_dists <- length(dists) 
+ggplot(haz, aes(x = time, y = est, col = method, linetype = method)) +
+  geom_line() +
+  xlab("Days") + ylab("Hazard") + 
+  scale_colour_manual(name = "", 
+                      values = c("black", rainbow(n_dists))) +
+  scale_linetype_manual(name = "",
+                        values = c(1, rep_len(2:6, n_dists)))
 
 
 
 
-"#FEECE2", 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"#FEECE2"
 
 
 
