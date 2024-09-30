@@ -139,8 +139,7 @@ df <- df %>%
     Idade < 40 ~ "< 40 anos",
     Idade >= 40 & Idade <= 49 ~ "40 a 49 anos",
     Idade >= 50 & Idade <= 59 ~ "50 a 59 anos",
-    Idade >= 60 & Idade <= 69 ~ "60 a 69 anos",
-    Idade >= 70 ~ ">= 70 anos"
+    Idade >= 60 ~ ">= 60 anos"
   ))
 
 df <- df %>%
@@ -150,7 +149,7 @@ df <- df %>%
   mutate(Event_Category = ifelse(Status == 1, "Falha", "Censura"))
 
 # Criar um gráfico com janelas de observação
-c1 <- ggplot(df, aes(y = Subject_ID)) +
+t1 <- ggplot(df, aes(y = Subject_ID)) +
   geom_segment(aes(x = df$Data_Diagnostico, xend = df$Data_Obito, y = Subject_ID, yend = Subject_ID, color = Event_Category), size = 1) +
   scale_color_manual(values = c("Falha" = "lightblue", "Censura" = "lightpink")) +
   labs(x = "Data", y = "Pacientes - Id",
@@ -245,6 +244,7 @@ ui <- dashboardPage(
       ),
       menuItem("Análise Exploratória", tabName = 'AED', icon = icon("dashboard"),
                menuSubItem("Tempo", tabName = "tempo"),
+               menuSubItem("Tabela", tabName = "tabela1"),
                menuSubItem("Observação", tabName = "janela-obs")),
       menuItem("Modelo Kaplan-Meier", tabName = "km", icon = icon("line-chart"),
                menuSubItem("Curva de Sobrevida", tabName = "km-geral"),
@@ -253,7 +253,7 @@ ui <- dashboardPage(
       menuItem("Modelos Paramétricos", tabName = "parametricos", icon = icon("bar-chart"),
                menuSubItem("Paramétricos", tabName = "Dist"),
                menuSubItem("Avaliação dos Modelos", tabName = "Aval"),
-               menuSubItem("Diagnóstico dos Modelos", tabName = "Diag"))
+               menuSubItem("Diagnóstico do Modelo", tabName = "Diag"))
     )
   ),
   dashboardBody(

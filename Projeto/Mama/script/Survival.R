@@ -133,14 +133,14 @@ ggsurvplot(fit_overall,
            ylab = "Probabilidade de Sobrevida",
            risk.table = TRUE,
            conf.int = TRUE,
-           ylim = c(0.85,1),
+           ylim = c(0.8,1),
            surv.median.line = "hv")
 
 # 
-km_sex = survfit(Surv(Tempo, Status) ~ Sexo, data = data)
+km_sex = survfit(Surv(Tempo, Status) ~ Etnia, data = df)
 print(km_sex)
 
-ggsurvplot(survfit(Surv(Tempo, Status) ~ Sexo, data = data), # modelo de sobrevivencia.
+ggsurvplot(survfit(Surv(Tempo, Status) ~ Etnia, data = df), # modelo de sobrevivencia.
            xlab = "Dias", 
            ylab = "Probabilidade de Sobrevida",
            pval = TRUE, 

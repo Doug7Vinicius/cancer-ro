@@ -126,6 +126,8 @@ ui <- dashboardPage(
       }
     ")),
     
+    
+    
     tabItems(
       tabItem(tabName = "home",
               fluidRow(
@@ -164,19 +166,22 @@ ui <- dashboardPage(
                     height = 800,
                     leafletOutput("cancer_map", height = "700px")
                   )
-                ),
-                
-                column(
-                  width = 4,
-                  box(
-                    title = "Tipo de Câncer",
-                    status = "primary",
-                    solidHeader = TRUE,
-                    width = 12,
-                    selectInput("tipo_cancer", "Tipo de Câncer", choices = c("Mama", "Prostata"), selected = "Mama")
-                  )
                 )
+                
+            ),
+            column(
+              width = 5,
+              box(
+                title = "Indicadores de Câncer de Mama",
+                status = "primary",
+                solidHeader = TRUE,
+                width = 10,
+                valueBoxOutput("totalPatients"),
+                valueBoxOutput("totalDeaths"),
+                valueBoxOutput("survivorPercentage")
               )
+            )
+      
       )
     )
   )
@@ -213,9 +218,27 @@ server <- function(input, output, session) {
     }
   })
   
+  
+  output$totalPatients <- renderValueBox({
+    total_patients <- nrow(df)  # Total de pacientes
+    valueBox(total_patients, "Total de Pacientes", icon = icon("user"))
+  })
+  
+  output$totalDeaths <- renderValueBox({
+    total_deaths <- sum(df$`Status` == 1)  # Supondo que 'Status' indica falecimentos
+    valueBox(total_deaths, "Total de Mortes", icon = icon("skull"))
+  })
+  
+  output$survivorPercentage <- renderValueBox({
+    total_patients <- nrow(df)
+    total_deaths <- sum(df$`Status` == 1)
+    survivor_percentage <- (total_patients - total_deaths) / total_patients * 100
+    valueBox(round(survivor_percentage, 2), "Percentual de Sobreviventes", icon = icon("heartbeat"), color = "green")
+  })
+  
   # Renderizar o mapa
   output$cancer_map <- renderLeaflet({
-    df_map <- selected_data()
+    df_map <- map_data_mama  # Apenas câncer de mama
     
     # Criar categorias para incidências
     df_map$incidencia_cat <- cut(df_map$Incidencia,
@@ -231,24 +254,23 @@ server <- function(input, output, session) {
       addTiles() %>%
       addPolygons(
         fillColor = ~pal(df_map$incidencia_cat),
-        color = "black",  # Contornos dos municípios
+        color = "black",
         weight = 1,
         opacity = 1,
         fillOpacity = 0.9,
         label = ~paste(NM_MUN, ": ", Incidencia),
-        labelOptions = labelOptions(style = list("font-size" = "15px")),  # Aumenta o tamanho da fonte
+        labelOptions = labelOptions(style = list("font-size" = "15px")),
         highlightOptions = highlightOptions(weight = 3, color = "#666")
       ) %>%
       addLegend(pal = pal,
                 values = df_map$incidencia_cat,
                 title = "Câncer de Mama (2015-2017)",
                 position = "bottomleft",
-                labFormat = labelFormat())%>%
+                labFormat = labelFormat()) %>%
       addScaleBar(position = "bottomright", 
                   options = scaleBarOptions(maxWidth = 100, 
                                             metric = TRUE, 
-                                            imperial = FALSE))  # Adiciona a escala em km
-    
+                                            imperial = FALSE))
   })
 }
 
