@@ -168,18 +168,6 @@ ui <- dashboardPage(
                   )
                 )
                 
-            ),
-            column(
-              width = 5,
-              box(
-                title = "Indicadores de Câncer de Mama",
-                status = "primary",
-                solidHeader = TRUE,
-                width = 10,
-                valueBoxOutput("totalPatients"),
-                valueBoxOutput("totalDeaths"),
-                valueBoxOutput("survivorPercentage")
-              )
             )
       
       )

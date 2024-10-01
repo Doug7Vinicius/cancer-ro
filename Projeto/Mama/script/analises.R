@@ -1,5 +1,6 @@
 
 # https://www.gov.br/saude/pt-br/assuntos/noticias-para-os-estados/rondonia/2023/fevereiro/estudo-aponta-para-estimativa-de-mais-de-8-mil-novos-casos-de-cancer-em-rondonia-ate-2025
+# https://www.linkedin.com/pulse/building-interactive-dashboard-using-r-shinydashboard-rendy-kurnia
 
 
 

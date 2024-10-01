@@ -175,7 +175,29 @@ ggplot(haz, aes(x = time, y = est, col = method, linetype = method)) +
 
 
 
+set.seed(123)  # Para reprodutibilidade
+n <- 100  # Número de diagnósticos
+data_diagnosticos <- data.frame(
+  data = can_fm$`Data de Diagnostico`
+)
 
+# Extrair o ano da data
+data_diagnosticos <- data_diagnosticos %>%
+  mutate(ano = format(data, "%Y"))
+
+# Contar a frequência de diagnósticos por ano
+frequencia_por_ano <- data_diagnosticos %>%
+  group_by(ano) %>%
+  summarise(frequencia = n())
+
+# Criar o gráfico de barras
+ggplot(frequencia_por_ano, aes(x = ano, y = frequencia, fill = ano)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Câncer por ano de diagnóstico",
+       x = "Ano do diagnóstico",
+       y = "Nº de casos") +
+  theme_minimal() +
+  theme(legend.position = "none") 
 
 
 
