@@ -45,6 +45,7 @@ library(flexsurv)
 library(eha)
 library(shiny)
 library(shinydashboard)
+library(shinydashboardPlus)
 #library(shiny.semantic)
 #library(semantic.dashboard)
 library(readr)
@@ -333,8 +334,9 @@ server <- function(input, output, session) {
     pal <- colorFactor(palette = c("#FBB4BA", "#F28EAC", "#F867A2", "#C61A8A", "#953495"), 
                        domain = df_map$incidencia_cat)
     
-    leaflet(data = df_map) %>%
+    leaflet(data = df_map, options = leafletOptions(scrollWheelZoom = FALSE, zoomControl = FALSE)) %>%
       addTiles() %>%
+      setView(lng = -63.3, lat = -10.8, zoom = 7.) %>% 
       addPolygons(
         fillColor = ~pal(df_map$incidencia_cat),
         color = "black",
@@ -353,7 +355,16 @@ server <- function(input, output, session) {
       addScaleBar(position = "bottomright", 
                   options = scaleBarOptions(maxWidth = 100, 
                                             metric = TRUE, 
-                                            imperial = FALSE))
+                                            imperial = FALSE))%>%
+      htmlwidgets::onRender("
+    function(el, x) {
+      var map = this;
+      map.dragging.disable();  // Desabilita o arrasto (dragging)
+      map.touchZoom.disable(); // Desabilita zoom por toque
+      map.doubleClickZoom.disable(); // Desabilita zoom por duplo clique
+      map.scrollWheelZoom.disable(); // Desabilita zoom por rolagem do mouse
+    }
+  ")
   })
   
   

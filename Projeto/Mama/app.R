@@ -32,7 +32,7 @@ library(leaflet)
 
 # Importar os dados.
 #-------------------------------------------------------------------------------
-base <- read_delim("~/PROJETOS/CANCER/Projeto/Mama/dataset/base_nao_identificada_2864.csv", 
+base <- read_delim("C:\\Users\\Douglas\\Desktop\\cancer-ro\\Projeto\\Mama\\dataset\\base_nao_identificada_2864.csv", 
                    delim = ";", escape_double = FALSE, locale = locale(encoding = "Latin1"), 
                    trim_ws = TRUE)
 
@@ -189,7 +189,7 @@ map_data_mama <- rondonia_map %>%
 #-------------------------------------------------------------------------------
 
 # Carregar dados geográficos (shapefile de Rondônia)
-shapefile_path <- "C:\\Users\\44735\\Downloads\\RO_Municipios_2022\\RO_Municipios_2022.shp"
+shapefile_path <- "C:\\Users\\Douglas\\Desktop\\cancer-ro\\Projeto\\Mama\\dataset\\RO_Municipios_2022.shp"
 rondonia_map <- st_read(shapefile_path)
 
 #

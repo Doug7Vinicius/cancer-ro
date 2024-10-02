@@ -204,6 +204,37 @@ ggplot(frequencia_por_ano, aes(x = ano, y = frequencia, fill = ano)) +
 
 
 
+# Carregar pacotes
+library(ggplot2)
+library(dplyr)
+
+# Exemplo de dados (substitua pelos seus dados reais)
+set.seed(123)
+dados <- data.frame(idade = sample(30:80, 100, replace = TRUE))
+
+# Criar a coluna de faixas etárias
+dados <- dados %>%
+  mutate(faixa_etaria = case_when(
+    idade < 40 ~ "< 40",
+    idade >= 40 & idade <= 49 ~ "40 - 49",
+    idade >= 50 & idade <= 59 ~ "50 - 59",
+    idade >= 60 ~ ">= 60"
+  ))
+
+# Calcular a frequência e percentual por faixa etária
+dados_resumo <- dados %>%
+  group_by(faixa_etaria) %>%
+  summarise(frequencia = n()) %>%
+  mutate(percentual = (frequencia / sum(frequencia)) * 100)
+
+# Criar o gráfico de barras horizontais
+ggplot(dados_resumo, aes(x = frequencia, y = faixa_etaria)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_text(aes(label = paste0(round(percentual, 1), "%")), 
+            hjust = -0.2, color = "black") +
+  labs(x = "Frequência", y = "Faixa Etária", title = "Distribuição de Pacientes por Faixa Etária") +
+  theme_bw() +
+  theme(panel.grid.major.y = element_blank())  # Remove as linhas de grade horizontais
 
 
 

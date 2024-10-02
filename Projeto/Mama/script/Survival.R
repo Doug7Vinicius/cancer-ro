@@ -57,7 +57,7 @@ ggsurvplot(
   # risk.table.y.text.col = TRUE,
   # risk.table.y.text = TRUE,
   # ncensor.plot = TRUE,
-  ylim = c(0.85,1)
+  ylim = c(0.8,1)
 )
 
 
