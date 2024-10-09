@@ -100,7 +100,7 @@ ui <- dashboardPage(
     )
     ),
   dashboardBody(
-    
+    use_theme(mytheme),
     tags$head(
       tags$style(".skin-blue .main-header .logo {
                     color: #fff;
@@ -110,12 +110,9 @@ ui <- dashboardPage(
       "),
       
       tags$style(".main-header .navbar{
-                    max-height: 10px;
+                    max-height: 7px;
                     }
                  ")),
-    
-    use_theme(mytheme), # <-- use the theme
-    
     tags$style(HTML("
     .sidebar-menu .treeview-menu>li>a {
       color: #2E3440 !important; /* Cor do texto */
@@ -208,12 +205,11 @@ ui <- dashboardPage(
                     id = "tabset2", 
                     height = "400px",
                     width = 7,
-                    tabPanel("Geral", plotlyOutput('km_geral', height = "400px")),
-                    tabPanel("Estado Civil", plotOutput('km_estado_civil')),
-                    tabPanel("Escolaridade", plotOutput('km_escolaridade')),
-                    tabPanel("Etnia", plotOutput('km_etnia')),
-                    tabPanel("Idade", plotlyOutput('km_idade', 
-                                                   height = 500))
+                    tabPanel("Geral", plotOutput('km_geral', height = "700px")),
+                    tabPanel("Estado Civil", plotOutput('km_estado_civil', height = "700px")),
+                    tabPanel("Escolaridade", plotOutput('km_escolaridade', height = "700px")),
+                    tabPanel("Etnia", plotOutput('km_etnia', height = "700px")),
+                    tabPanel("Idade", plotlyOutput('km_idade', height = 700))
                   )
                 )
         ),
@@ -336,7 +332,7 @@ server <- function(input, output, session) {
     
     leaflet(data = df_map, options = leafletOptions(scrollWheelZoom = FALSE, zoomControl = FALSE)) %>%
       addTiles() %>%
-      setView(lng = -63.3, lat = -10.8, zoom = 7.) %>% 
+      setView(lng = -63.3, lat = -10.8, zoom = 7.4) %>% 
       addPolygons(
         fillColor = ~pal(df_map$incidencia_cat),
         color = "black",
@@ -442,6 +438,29 @@ server <- function(input, output, session) {
     # Função de Risco Acumulado.
     
     
+  })
+  
+  ## Menu Modelo Kaplan-Meier
+  #
+  fit1 <- survfit(Surv(Tempo, Status) ~ 1, data = df)
+  output$km_geral <- renderPlot({
+    
+    g1 <- ggsurvplot(
+      fit1, data = df,
+      pval = TRUE, 
+      conf.int = TRUE,
+      xlab = "Tempo (dias)", ylab = "Probabilidade de Sobrevivência",
+      break.time.by = 100,
+      ggtheme = theme_light(),
+      ylim = c(0.8,1),
+      xlim = c(0,1400)
+      # risk.table = "abs_pct",
+      # risk.table.y.text.col = TRUE,
+      # risk.table.y.text = TRUE,
+      # ncensor.plot = TRUE,
+    )
+    g1$plot <- g1$plot + theme(legend.title = element_blank())
+    print(g1)
   })
   
   # 

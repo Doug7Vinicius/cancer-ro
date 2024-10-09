@@ -204,42 +204,54 @@ ggplot(frequencia_por_ano, aes(x = ano, y = frequencia, fill = ano)) +
 
 
 
-# Carregar pacotes
 library(ggplot2)
 library(dplyr)
 
-# Exemplo de dados (substitua pelos seus dados reais)
-set.seed(123)
-dados <- data.frame(idade = sample(30:80, 100, replace = TRUE))
-
-# Criar a coluna de faixas etárias
-dados <- dados %>%
-  mutate(faixa_etaria = case_when(
-    idade < 40 ~ "< 40",
-    idade >= 40 & idade <= 49 ~ "40 - 49",
-    idade >= 50 & idade <= 59 ~ "50 - 59",
-    idade >= 60 ~ ">= 60"
-  ))
-
 # Calcular a frequência e percentual por faixa etária
-dados_resumo <- dados %>%
+dados_resumo <- df %>%
   group_by(faixa_etaria) %>%
   summarise(frequencia = n()) %>%
   mutate(percentual = (frequencia / sum(frequencia)) * 100)
 
+# Ordenar a faixa etária na ordem desejada
+dados_resumo <- dados_resumo %>%
+  mutate(faixa_etaria = factor(faixa_etaria, levels = c(">= 60 anos", "50 a 59 anos", "40 a 49 anos",
+  "< 40 anos")))
+
 # Criar o gráfico de barras horizontais
-ggplot(dados_resumo, aes(x = frequencia, y = faixa_etaria)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
+ggplot(dados_resumo, aes(x = frequencia, y =  faixa_etaria)) +
+  geom_bar(stat = "identity", fill = "#F867A2") +
   geom_text(aes(label = paste0(round(percentual, 1), "%")), 
-            hjust = -0.2, color = "black") +
-  labs(x = "Frequência", y = "Faixa Etária", title = "Distribuição de Pacientes por Faixa Etária") +
-  theme_bw() +
+            hjust = 6,  # Centraliza horizontalmente dentro da barra
+            vjust = 0,    # Alinha o texto na parte inferior da barra
+            color = "white", size = 4.5) +
+  geom_text(aes(label = frequencia), 
+            hjust = -.5,  # Coloca a frequência no final da barra
+            color = "black", size = 4.5) +
+  labs(x = "", y = "Faixa Etária") +
+  theme_classic() +
   theme(panel.grid.major.y = element_blank())  # Remove as linhas de grade horizontais
 
 
 
 
 
+f1 <- dados_resumo %>% 
+  ggplot(aes(x = frequencia, y = faixa_etaria)) +
+  geom_col(fill = "#F867A2") +
+  # adicionar camada de texto
+  geom_label(aes(label = frequencia), size = 4.5) +
+  geom_text(aes(label = paste0(round(percentual, 2), "%")), 
+            hjust = case_when(
+              dados_resumo$faixa_etaria == "< 40 anos" ~ 6.5,  # Centraliza na barra
+              dados_resumo$faixa_etaria == "40 a 49 anos" ~ 12.5,
+              dados_resumo$faixa_etaria == "50 a 59 anos" ~ 13.59,
+              dados_resumo$faixa_etaria == ">= 60 anos" ~ 12.2
+            ),
+            vjust = 0.5,  # Alinha verticalmente
+            color = "white", size = 4.5) +
+  labs(x = "", y = "Faixa Etária") +
+  theme_classic()
 
 
 
